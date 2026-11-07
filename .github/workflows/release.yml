@@ -59,10 +59,15 @@ jobs:
       - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
         with:
           version: "~> v2"
+          # A rerun checks out the tag and then writes main's release
+          # configuration over it, so the tree is dirty on purpose and
+          # goreleaser's git validation has to be skipped. (There is no
+          # --allow-dirty flag; goreleaser rejects the whole command.)
+          #
           # The tap is optional. Without its token, publishing the GitHub
           # release must still succeed instead of failing after all artifacts
           # have already been uploaded.
-          args: release --clean ${{ inputs.tag != '' && '--allow-dirty' || '' }} ${{ secrets.HOMEBREW_TAP_TOKEN == '' && '--skip=homebrew' || '' }}
+          args: release --clean ${{ inputs.tag != '' && '--skip=validate' || '' }} ${{ secrets.HOMEBREW_TAP_TOKEN == '' && '--skip=homebrew' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}

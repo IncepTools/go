@@ -23,6 +23,9 @@ change is listed under **Changed** with what to do about it.
   transparency-log and network failures with backoff and fails fast on
   anything that is actually ours. A manual rerun now also takes `scripts/`
   from `main`, alongside the release configuration it already took.
+- The manual rerun path passed `--allow-dirty`, which is not a goreleaser
+  flag — goreleaser rejected the command outright, so republishing a tag
+  after a partial release had never once worked. It is `--skip=validate`.
 - The release workflow passed `--skip=brews` when no Homebrew tap token was
   configured, which goreleaser v2 rejects as an invalid value — the fallback
   meant to let a tokenless release through would itself have failed it. It is

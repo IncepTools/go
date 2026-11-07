@@ -1,7 +1,10 @@
-# Binaries
+# Binaries.
+#
+# The leading slash on /icpt matters: a bare "icpt" would also match the
+# cmd/icpt DIRECTORY, so the CLI's own source would be silently untracked.
 /bin/
 /dist/
-icpt
+/icpt
 *.exe
 *.test
 

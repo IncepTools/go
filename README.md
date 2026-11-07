@@ -59,6 +59,29 @@ brew install IncepTools/tap/icpt                      # macOS and Linux
 curl -fsSL https://raw.githubusercontent.com/IncepTools/go/main/install.sh | sh
 ```
 
+**The AI development skill**
+
+Install the framework skill into any project that uses inceptools:
+
+```bash
+mkdir -p .agents/skills/inceptools
+curl -fsSL https://raw.githubusercontent.com/IncepTools/go/main/.agents/skills/inceptools/SKILL.md \
+  -o .agents/skills/inceptools/SKILL.md
+```
+
+Or copy it with Git:
+
+```bash
+git clone --depth 1 https://github.com/IncepTools/go.git /tmp/inceptools-skill
+mkdir -p .agents/skills/inceptools
+cp /tmp/inceptools-skill/.agents/skills/inceptools/SKILL.md .agents/skills/inceptools/
+rm -rf /tmp/inceptools-skill
+```
+
+AI coding agents that support repository skills can then load
+`.agents/skills/inceptools/SKILL.md` for the framework architecture, CLI,
+feature patterns, testing, security, and release workflow.
+
 Go 1.26+ (the floor Fiber v3 sets). HTTP is [Fiber v3](https://gofiber.io);
 persistence is [GORM](https://gorm.io), used only by `src/data` — the rest of
 the framework does not know your database exists.

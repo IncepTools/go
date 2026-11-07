@@ -103,7 +103,7 @@ func run() error {
 
 	app := inceptools.New(inceptools.Options{
 		Service: "blog",
-		Version: "0.1.0",
+		Version: "1.0.0",
 		Addr:    ":8081",
 		Prefix:  "/api/v1",
 		Logger:  logger,

@@ -59,7 +59,7 @@ func run() error {
 
 	app := inceptools.New(inceptools.Options{
 		Service: "todo",
-		Version: "0.1.0",
+		Version: "1.0.0",
 		Addr:    ":8080",
 		Prefix:  "/api/v1",
 		Logger:  logger,

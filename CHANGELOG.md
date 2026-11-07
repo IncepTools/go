@@ -9,6 +9,12 @@ change is listed under **Changed** with what to do about it.
 
 ## [Unreleased]
 
+No changes yet.
+
+## [1.0.0] — 2026-11-07
+
+First stable release.
+
 ### Changed
 
 - **Breaking: all library code moved to `src/`.** Every import gains a
@@ -65,10 +71,6 @@ change is listed under **Changed** with what to do about it.
 
   *(Both of the above landed inside the `src/` restructure commit rather
   than their own.)*
-
-## [0.1.0] — 2026-11-07
-
-First release.
 
 ### Added
 
@@ -143,5 +145,5 @@ First release.
 - Documentation under `docs/`, one page per capability, and nine runnable
   example services under `examples/`.
 
-[Unreleased]: https://github.com/IncepTools/go/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/IncepTools/go/releases/tag/v0.1.0
+[Unreleased]: https://github.com/IncepTools/go/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/IncepTools/go/releases/tag/v1.0.0

@@ -61,8 +61,8 @@ Then:
 ## Tagging
 
 ```bash
-git tag -a v0.2.0 -m "v0.2.0"
-git push origin v0.2.0
+git tag -a v1.0.0 -m "v1.0.0"
+git push origin v1.0.0
 ```
 
 The `release` workflow then runs the tests again — a release is the one

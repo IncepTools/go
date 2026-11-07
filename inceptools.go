@@ -52,7 +52,7 @@ import (
 
 // Version is the framework's own version, reported on the service's health
 // detail endpoint so you can tell which build of the framework is deployed.
-const Version = "0.1.0"
+const Version = "1.0.0"
 
 // Options configures the application.
 //

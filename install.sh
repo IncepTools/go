@@ -2,7 +2,7 @@
 # Install the icpt CLI.
 #
 #   curl -fsSL https://raw.githubusercontent.com/IncepTools/go/main/install.sh | sh
-#   curl -fsSL .../install.sh | sh -s -- -b /usr/local/bin -v v0.2.0
+#   curl -fsSL .../install.sh | sh -s -- -b /usr/local/bin -v v1.0.0
 #
 # Prefer `go install github.com/IncepTools/go/cmd/icpt@latest` if you have a
 # Go toolchain. This exists for machines that do not.
@@ -18,7 +18,7 @@ usage() {
 Usage: install.sh [-b <dir>] [-v <version>]
 
   -b <dir>      where to install (default: ~/.local/bin)
-  -v <version>  a tag such as v0.2.0 (default: the latest release)
+  -v <version>  a tag such as v1.0.0 (default: the latest release)
   -h            this message
 USAGE
 }

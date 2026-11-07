@@ -550,10 +550,11 @@ release workflow's own OIDC identity, and each ships an SBOM.
 
 ## Status
 
-**v0.1.0.** Built on Fiber v3 and GORM, both stable. The API is close to
-settled; what stands between here and 1.0 is in [ROADMAP.md](ROADMAP.md) —
-mainly soak time, an OpenAPI generator from the route metadata already
-collected, and benchmarks with numbers in this file rather than claims.
+**v1.0.0.** Built on Fiber v3 and GORM, both stable. The public API is now
+covered by the compatibility policy in [RELEASING.md](RELEASING.md).
+The next roadmap items are an OpenAPI generator from the route metadata
+already collected, and benchmarks with numbers in this file rather than
+claims.
 
 ## Contributing
 

@@ -41,11 +41,13 @@ import (
 	"github.com/IncepTools/go/src/core/lifecycle"
 	"github.com/IncepTools/go/src/core/logx"
 	"github.com/IncepTools/go/src/core/module"
+	"github.com/IncepTools/go/src/core/telemetry"
 	"github.com/IncepTools/go/src/web/filter"
 	"github.com/IncepTools/go/src/web/guard"
 	"github.com/IncepTools/go/src/web/health"
 	"github.com/IncepTools/go/src/web/interceptor"
 	"github.com/IncepTools/go/src/web/middleware"
+	"github.com/IncepTools/go/src/web/observability"
 	"github.com/IncepTools/go/src/web/response"
 	"github.com/IncepTools/go/src/web/router"
 )
@@ -85,6 +87,15 @@ type Options struct {
 	// RateLimit, when set, is installed after the identity middleware so its
 	// key function can see who is calling.
 	RateLimit *middleware.RateLimitOptions
+	// Metrics enables the bounded request collector and exposes it at
+	// MetricsPath (default /metrics). It is intentionally opt-in so services
+	// that already own a telemetry endpoint do not get a surprise route.
+	Metrics     *observability.Metrics
+	MetricsPath string
+	// Telemetry enables OpenTelemetry HTTP spans and request metrics. The
+	// component also owns provider shutdown and can be used from jobs/events
+	// through telemetry.Start or telemetry.Run.
+	Telemetry *telemetry.Telemetry
 	// Filters are exception filters consulted before the built-in mapping.
 	Filters []filter.Filter
 
@@ -171,6 +182,9 @@ func New(opt Options) *Application {
 		Log:       log,
 		opt:       opt,
 	}
+	if opt.Telemetry != nil {
+		app.Lifecycle.Observe("telemetry", opt.Telemetry)
+	}
 
 	// Put the logger on every request context so logx.C works at any depth.
 	f.Use(func(c fiber.Ctx) error {
@@ -182,6 +196,17 @@ func New(opt Options) *Application {
 	}
 	for _, h := range middleware.Chain(opt.Middleware) {
 		f.Use(h)
+	}
+	if opt.Telemetry != nil {
+		f.Use(opt.Telemetry.Middleware())
+	}
+	if opt.Metrics != nil {
+		f.Use(opt.Metrics.Middleware())
+		path := opt.MetricsPath
+		if path == "" {
+			path = "/metrics"
+		}
+		f.Get(path, opt.Metrics.Handler)
 	}
 	if opt.RateLimit != nil {
 		f.Use(middleware.RateLimit(*opt.RateLimit))

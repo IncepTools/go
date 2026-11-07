@@ -1,38 +1,40 @@
+// Package events is the streaming module.
 package events
 
 import (
-	"fmt"
+	"github.com/IncepTools/go/examples/sse/apps/stream/events/constants"
+	"github.com/IncepTools/go/examples/sse/apps/stream/events/controller"
+	"github.com/IncepTools/go/examples/sse/apps/stream/events/service"
 	"github.com/IncepTools/go/src/core/di"
 	"github.com/IncepTools/go/src/core/module"
-	"github.com/IncepTools/go/src/web/router"
-	"github.com/IncepTools/go/src/web/sse"
-	"github.com/gofiber/fiber/v3"
-	"time"
 )
 
-type Module struct{ module.Base }
-
-func New(*di.Scope) *Module {
-	return &Module{Base: module.NewBase("events", module.WithControllers(&Controller{}))}
+// Module is the streaming resource.
+type Module struct {
+	module.Base
+	svc *service.FeedService
 }
 
-type Controller struct{}
-
-func (*Controller) Routes() []router.Route {
-	return []router.Route{router.Get("/", func(c fiber.Ctx) error {
-		return sse.New(sse.Config{Handler: func(_ fiber.Ctx, stream *sse.Stream) error {
-			ticker := time.NewTicker(time.Second)
-			defer ticker.Stop()
-			for i := 1; ; i++ {
-				select {
-				case <-stream.Context().Done():
-					return nil
-				case now := <-ticker.C:
-					if err := stream.Event(sse.Event{Name: "tick", ID: fmt.Sprint(i), Data: fiber.Map{"time": now.UTC().Format(time.RFC3339)}}); err != nil {
-						return err
-					}
-				}
-			}
-		}})(c)
-	}).AsPublic()}
+// Providers registers this module's dependencies.
+//
+// It is a package function, not a method, because it must run BEFORE any
+// module is constructed — New below resolves the service out of the
+// container, so the service has to be registered first.
+func Providers(c *di.Container) error {
+	return di.Provide(c, func(*di.Scope) (*service.FeedService, error) {
+		return service.NewFeedService(), nil
+	})
 }
+
+// New builds the module.
+func New(s *di.Scope) *Module {
+	svc := di.MustResolve[*service.FeedService](s)
+	return &Module{
+		svc: svc,
+		Base: module.NewBase(constants.ModuleName,
+			module.WithControllers(controller.New(svc)),
+		),
+	}
+}
+
+var _ module.Module = (*Module)(nil)

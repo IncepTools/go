@@ -13,9 +13,14 @@ go run ./minimal    # :8080
 go run ./todo       # :8080
 go run ./blog       # :8081
 go run ./worker     # :8082
+go run ./webhooks     # :8084
+go run ./queues       # :8085
+go run ./scheduling   # :8086
+go run ./sse          # :8087
+go run ./event-emitter # :8088
 ```
 
-Or from the repository root: `make examples` builds and vets all four.
+Or from the repository root: `make examples` builds and vets all nine.
 
 | | Port | Shows |
 |---|---|---|
@@ -23,6 +28,11 @@ Or from the repository root: `make examples` builds and vets all four.
 | [todo](todo) | 8080 | In-memory CRUD, events, a scheduled purge, the three DTO hooks. |
 | [blog](blog) | 8081 | A real database: migrations, a scoped repository, a transaction spanning a state change and an outbox message, and the relay that delivers it. |
 | [worker](worker) | 8082 | A service with **no API**: modules that declare schedules instead of routes, and a drain you can watch. |
+| [webhooks](webhooks) | 8084 | Signed webhook verification and event dispatch. |
+| [queues](queues) | 8085 | Retrying in-process worker queue. |
+| [scheduling](scheduling) | 8086 | Singleton scheduled jobs and lifecycle draining. |
+| [sse](sse) | 8087 | Server-sent event streaming. |
+| [event-emitter](event-emitter) | 8088 | Typed asynchronous event subscribers. |
 
 ## Where to start
 

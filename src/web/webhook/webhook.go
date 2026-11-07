@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// ErrInvalidSignature indicates that a webhook signature is missing or invalid.
 var ErrInvalidSignature = errors.New("webhook: invalid signature")
 
 // Sign returns the conventional "sha256=<hex>" signature.

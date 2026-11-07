@@ -330,11 +330,27 @@ func (a *Application) RouteTable() string { return a.Routes.Table() }
 
 // RoutesJSON renders the mounted route table as JSON, for `icpt routes`.
 func (a *Application) RoutesJSON() ([]byte, error) {
+	type routeJSON struct {
+		Method     string   `json:"method"`
+		Path       string   `json:"path"`
+		FullPath   string   `json:"full_path"`
+		Module     string   `json:"module"`
+		GuardNames []string `json:"guards"`
+		Public     bool     `json:"public"`
+	}
+	routes := a.Routes.All()
+	serialized := make([]routeJSON, 0, len(routes))
+	for _, route := range routes {
+		serialized = append(serialized, routeJSON{
+			Method: route.Method, Path: route.Path, FullPath: route.FullPath,
+			Module: route.Module, GuardNames: route.GuardNames, Public: route.Public,
+		})
+	}
 	return json.MarshalIndent(struct {
-		Service string           `json:"service"`
-		Version string           `json:"version"`
-		Routes  []router.Mounted `json:"routes"`
-	}{Service: a.opt.Service, Version: a.opt.Version, Routes: a.Routes.All()}, "", "  ")
+		Service string      `json:"service"`
+		Version string      `json:"version"`
+		Routes  []routeJSON `json:"routes"`
+	}{Service: a.opt.Service, Version: a.opt.Version, Routes: serialized}, "", "  ")
 }
 
 // WriteRoutes writes the route table to a file.

@@ -1,8 +1,9 @@
 package webhook_test
 
 import (
-	"github.com/IncepTools/go/src/web/webhook"
 	"testing"
+
+	"github.com/IncepTools/go/src/web/webhook"
 )
 
 func TestSignAndVerify(t *testing.T) {

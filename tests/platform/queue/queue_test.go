@@ -2,10 +2,11 @@ package queue_test
 
 import (
 	"context"
-	"github.com/IncepTools/go/src/platform/queue"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/IncepTools/go/src/platform/queue"
 )
 
 func TestQueueRetriesAndDeadLetters(t *testing.T) {

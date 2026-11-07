@@ -125,7 +125,22 @@ func cmdRoutes(args []string) error {
 	})
 
 	if *asJSON {
-		out, err := json.MarshalIndent(rows, "", "  ")
+		type routeJSON struct {
+			Method     string   `json:"method"`
+			Path       string   `json:"path"`
+			FullPath   string   `json:"full_path"`
+			Module     string   `json:"module"`
+			GuardNames []string `json:"guards"`
+			Public     bool     `json:"public"`
+		}
+		serialized := make([]routeJSON, 0, len(rows))
+		for _, route := range rows {
+			serialized = append(serialized, routeJSON{
+				Method: route.Method, Path: route.Path, FullPath: route.FullPath,
+				Module: route.Module, GuardNames: route.GuardNames, Public: route.Public,
+			})
+		}
+		out, err := json.MarshalIndent(serialized, "", "  ")
 		if err != nil {
 			return err
 		}

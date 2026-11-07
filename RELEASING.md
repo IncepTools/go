@@ -6,7 +6,8 @@ Two things ship from this repository and they ship together:
   to upload to — pushing a tag *is* the release, and
   `go get github.com/IncepTools/go@v1.2.3` resolves straight from here.
 - **The CLI**, `icpt`. Built for five platforms, signed, with an SBOM, and
-  published to the Homebrew tap.
+  published to the Homebrew tap as a macOS cask. Linux installs come from
+  `go install` or `install.sh`; Homebrew does not install casks there.
 
 ## Versioning
 
@@ -86,6 +87,27 @@ cosign verify-blob checksums.txt \
 Signing is keyless: the identity is the release workflow's own OIDC token,
 so there is no private key to lose and the signature proves the artifact
 came from this repository rather than from somebody's laptop.
+
+## If the release workflow fails
+
+The release job builds, signs and publishes in that order, so a failure
+after the build has produced nothing: no GitHub release, no tap update.
+Rerun it — **do not retag**. Actions → release → *Run workflow*, with the
+existing tag as the input. That checks out the tag's immutable source and
+version while using `main`'s current workflow, `.goreleaser.yaml` and
+`scripts/`.
+
+The common failure is not ours. Keyless signing writes to
+`rekor.sigstore.dev`, a public transparency log with no availability promise
+to this project, and a `giving up after 4 attempt(s)` error from it is an
+outage or a rate-limit burst. `scripts/cosign-retry.sh` absorbs the short
+ones — four attempts, backing off to 90s — and refuses to retry a failure
+that is ours, such as a bad flag or a missing OIDC token. If it still fails,
+check [status.sigstore.dev](https://status.sigstore.dev) and rerun later.
+
+Signing is not skipped to get a release out. An unsigned archive published
+under a release that claims every archive is signed is worse than a release
+that is a few hours late.
 
 ## If a release is bad
 

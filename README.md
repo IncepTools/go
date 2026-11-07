@@ -84,7 +84,7 @@ go get github.com/IncepTools/go
 
 ```bash
 go install github.com/IncepTools/go/cmd/icpt@latest   # with a Go toolchain
-brew install IncepTools/tap/icpt                      # macOS and Linux
+brew install --cask IncepTools/tap/icpt               # macOS
 curl -fsSL https://raw.githubusercontent.com/IncepTools/go/main/install.sh | sh
 ```
 

@@ -28,10 +28,16 @@ jobs:
           ref: ${{ inputs.tag || github.ref }}
 
       # Manual reruns use the current release workflow and configuration while
-      # checking out the immutable tag's source and version.
+      # checking out the immutable tag's source and version. The release
+      # scripts come with it: a tag cut before a script existed would
+      # otherwise be republished with a configuration that calls it.
       - name: Use current release configuration
         if: inputs.tag != ''
-        run: git show origin/main:.goreleaser.yaml > .goreleaser.yaml
+        run: |
+          git show origin/main:.goreleaser.yaml > .goreleaser.yaml
+          rm -rf scripts
+          git archive origin/main scripts | tar -x
+          chmod +x scripts/*.sh
 
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -56,7 +62,7 @@ jobs:
           # The tap is optional. Without its token, publishing the GitHub
           # release must still succeed instead of failing after all artifacts
           # have already been uploaded.
-          args: release --clean ${{ inputs.tag != '' && '--allow-dirty' || '' }} ${{ secrets.HOMEBREW_TAP_TOKEN == '' && '--skip=brews' || '' }}
+          args: release --clean ${{ inputs.tag != '' && '--allow-dirty' || '' }} ${{ secrets.HOMEBREW_TAP_TOKEN == '' && '--skip=homebrew' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}

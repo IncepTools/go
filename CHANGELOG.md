@@ -9,7 +9,24 @@ change is listed under **Changed** with what to do about it.
 
 ## [Unreleased]
 
-No changes yet.
+### Changed
+
+- The Homebrew tap now ships `icpt` as a **cask** rather than a formula:
+  goreleaser v2 deprecated formulas, and casks are macOS-only. `brew install
+  --cask IncepTools/tap/icpt` on macOS; on Linux use `go install` or
+  `install.sh`, which is what the install docs already offered.
+
+### Fixed
+
+- The release workflow no longer fails when `rekor.sigstore.dev` is briefly
+  unavailable. cosign runs behind `scripts/cosign-retry.sh`, which retries
+  transparency-log and network failures with backoff and fails fast on
+  anything that is actually ours. A manual rerun now also takes `scripts/`
+  from `main`, alongside the release configuration it already took.
+- The release workflow passed `--skip=brews` when no Homebrew tap token was
+  configured, which goreleaser v2 rejects as an invalid value — the fallback
+  meant to let a tokenless release through would itself have failed it. It is
+  `--skip=homebrew`.
 
 ## [1.1.0] — 2026-11-07
 

@@ -62,8 +62,12 @@ sboms:
 # Keyless signing through the CI runner's OIDC identity. There is no private
 # key to lose, and `cosign verify-blob` proves an artifact came from this
 # repository's release workflow rather than from somebody's laptop.
+#
+# cosign runs behind a retry wrapper because the signature goes into a public
+# transparency log that is allowed to be down: without it, a rekor.sigstore.dev
+# blip fails the release after the binaries have already been built.
 signs:
-  - cmd: cosign
+  - cmd: ./scripts/cosign-retry.sh
     certificate: "${artifact}.pem"
     args:
       - sign-blob
@@ -115,7 +119,7 @@ release:
     ```bash
     go install github.com/IncepTools/go/cmd/icpt@{{ .Tag }}
     # or
-    brew install IncepTools/tap/icpt
+    brew install --cask IncepTools/tap/icpt   # macOS
     # or
     curl -fsSL https://raw.githubusercontent.com/IncepTools/go/main/install.sh | sh
     ```
@@ -130,16 +134,28 @@ release:
       --certificate-oidc-issuer https://token.actions.githubusercontent.com
     ```
 
-brews:
+# Homebrew. goreleaser v2 deprecated `brews` (a formula), and its replacement,
+# a cask, is macOS-only — Homebrew on Linux does not install casks. So brew is
+# a macOS install path now; on Linux use `go install` or install.sh, both of
+# which were already the documented options.
+homebrew_casks:
   - name: icpt
+    binaries: [icpt]
     repository:
       owner: IncepTools
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    directory: Formula
+    directory: Casks
     homepage: https://github.com/IncepTools/go
     description: Scaffolding, structure rules and SQL migrations for inceptools services
-    license: Apache-2.0
-    test: |
-      system "#{bin}/icpt", "version"
+    hooks:
+      post:
+        # The binaries are signed, but with a Sigstore identity rather than an
+        # Apple one, so Gatekeeper still quarantines them on download. Without
+        # this, every `brew install` is followed by a dialog the user has to
+        # refuse. Proper notarization would remove the need for it.
+        install_steps: |
+          on_macos do
+            run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/icpt"]
+          end
     skip_upload: auto

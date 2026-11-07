@@ -14,6 +14,11 @@ discovery bridge.
 - Keep controller -> service -> repository -> database boundaries.
 - Put tests in the mirrored `tests/` tree; remember `examples/` is a separate
   Go module.
+- Use `src/core/telemetry` for OpenTelemetry spans, metrics, propagation, and
+  provider shutdown across HTTP, jobs, queues, events, and functions.
+- Treat `/livez` as liveness and `/readyz` as dependency readiness;
+  `/healthz` is only the compatibility alias. Use `OnReload`/`Reload` for the
+  SIGHUP server and serverless reload contract.
 - Use parameterized SQL, validated identifiers, explicit guards, safe errors,
   context cancellation, and idempotent background work.
 - Run focused tests, `go test ./...`, examples tests, and `git diff --check`.

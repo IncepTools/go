@@ -31,6 +31,13 @@ run make lint, make vuln, and make release-dry.
 - Keep tests in the mirrored tests/ tree and use external test packages.
 - Add or update a runnable example when a public feature needs a usage story.
 - Update the relevant guide and CHANGELOG.md under Unreleased.
+- Public HTTP services expose `/livez` for liveness and `/readyz` for
+  dependency readiness; `/healthz` remains only as a compatibility alias.
+- Use `src/core/telemetry` for OpenTelemetry providers, propagation, execution
+  spans, and error recording. Register it with `Options.Telemetry` so lifecycle
+  shutdown flushes providers.
+- Server features should remain usable as a `net/http.Handler`; serverless
+  control planes call `Application.Reload` because they do not receive SIGHUP.
 - Keep exported identifiers documented and run goimports when adding imports.
 - Do not add a root dependency without explaining why it belongs in every
   consumer's dependency graph.

@@ -102,6 +102,21 @@ an explicit public marker.
 - Use the framework middleware and lifecycle rather than starting competing
   servers or shutdown goroutines.
 - Use `ctxkit` for account/tenant identity and detached background contexts.
+- Use `core/telemetry` for OpenTelemetry providers, propagation, error
+  recording, and spans. `Options.Telemetry` owns automatic HTTP instrumentation
+  and provider shutdown; `telemetry.Run`/`Start` cover arbitrary functions.
+  Prefer standard OTLP/HTTP environment variables or `telemetry.OTLPConfig` for
+  SigNoz, collectors, APMs, and other compatible backends; inject custom SDK
+  providers only when a service needs a specialized pipeline.
+- Framework execution boundaries already create spans for scheduler jobs,
+  queue attempts, and event handlers. Preserve those boundaries when adding
+  workers; do not create duplicate spans in wrappers without a meaningful
+  operation name.
+- Use `/livez` for liveness and `/readyz` for dependency readiness. Keep
+  `/healthz` only as the compatibility alias. Register `Application.OnReload`
+  for SIGHUP and call `Application.Reload` from serverless control planes.
+- `Application` implements `net/http.Handler`, so server and serverless
+  adapters share one configured application and one telemetry pipeline.
 
 ## Database and migrations
 
@@ -132,6 +147,7 @@ Use the existing public packages rather than inventing parallel infrastructure:
 - server-sent events: `src/web/sse`
 - webhooks: `src/web/webhook`
 - retries, breakers, idempotency, and outbox: `src/reliability`
+- OpenTelemetry: `src/core/telemetry`
 
 Read and run the matching example before changing a feature:
 `examples/scheduling`, `queues`, `event-emitter`, `sse`, `webhooks`, or `worker`.
@@ -215,6 +231,24 @@ ordered so an agent can execute it without guessing the framework's conventions.
 5. Add a test for cancellation, overlap/skipping, and lock behavior.
 6. Use `examples/scheduling` or `examples/worker` as the usage reference.
 
+Every scheduler execution is automatically traced as `scheduler.job`; add
+child spans only for meaningful operations inside the job.
+
+### Add observability or runtime reload
+
+1. Read `docs/telemetry.md`, `docs/health-checks.md`, and
+   `docs/lifecycle.md`.
+2. Configure one `telemetry.Telemetry` instance with the service resource and
+   the desired OpenTelemetry SDK exporter or custom providers.
+3. Pass it as `inceptools.Options.Telemetry`; the application lifecycle flushes
+   providers after workers and modules drain.
+4. Use `telemetry.Run`/`Start` for custom functions and propagate context to
+   outbound HTTP or messaging clients with `telemetry.Inject`.
+5. Use `app.OnReload` for mutable configuration. Test `app.Reload` directly;
+   do not make correctness depend on delivering SIGHUP in a serverless test.
+6. Test liveness, readiness, reload failure behavior, span error recording,
+   and shutdown flush/drain behavior.
+
 ### Add queue or event processing
 
 1. Decide whether the work must survive a process crash. If yes, use an outbox;
@@ -264,8 +298,9 @@ Use this map before introducing a new helper or dependency:
 | Request identity | `src/core/ctxkit` | Which account/tenant owns this operation? |
 | Dependency graph | `src/core/di` | Should this be supplied, provided, named, or scoped? |
 | Domain error | `src/core/errs` | What safe kind/code/message reaches the caller? |
-| Lifecycle | `src/core/lifecycle` | Does startup/ready/shutdown order matter? |
+| Lifecycle | `src/core/lifecycle` | Does startup/ready/reload/shutdown order matter? |
 | Structured logs | `src/core/logx` | What can be correlated without leaking secrets? |
+| OpenTelemetry | `src/core/telemetry` | Which boundary, provider, exporter, or propagation is involved? |
 | Module metadata | `src/core/module` | What does this resource provide and mount? |
 | Routes | `src/web/router` | Can the route be inspected and tested as data? |
 | Binding | `src/web/binding` | How are body, path, and query values decoded? |
@@ -346,6 +381,9 @@ middleware.md        HTTP chain
 pipes.md, validation.md input validation
 exception-filters.md errors and envelopes
 health-checks.md     liveness/readiness
+serverless.md        net/http/Lambda adapters and reload without signals
+telemetry.md         OpenTelemetry providers, spans, metrics, and propagation
+                     across HTTP, workers, queues, events, and functions
 database.md          scoped repository and transactions
 migrations.md        SQL migration lifecycle
 caching.md           cache policy

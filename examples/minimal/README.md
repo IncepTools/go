@@ -7,7 +7,7 @@ go run ./minimal
 
 curl localhost:8080/api/v1/greeter/hello/world
 curl localhost:8080/api/v1/greeter/hello/nobody   # 404, typed
-curl localhost:8080/healthz
+curl localhost:8080/livez
 ```
 
 It is one file, and the point is what is **absent**: no database, no

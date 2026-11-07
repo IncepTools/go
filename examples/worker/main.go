@@ -6,7 +6,7 @@
 // miss when every other example is a REST API.
 //
 //	go run ./worker
-//	curl localhost:8082/healthz
+//	curl localhost:8082/livez
 //	curl localhost:8082/health
 //
 // Press Ctrl-C and watch it drain: the scheduler stops accepting
@@ -54,7 +54,7 @@ func run() error {
 		// mid-drain.
 		DrainTimeout: 40 * time.Second,
 		Middleware: middleware.ChainOptions{
-			AccessLog: middleware.AccessLogOptions{SkipPaths: []string{"/healthz", "/readyz"}},
+			AccessLog: middleware.AccessLogOptions{SkipPaths: []string{"/livez", "/healthz", "/readyz"}},
 		},
 	})
 

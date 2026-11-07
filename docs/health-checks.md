@@ -5,7 +5,8 @@ the same question**.
 
 | Endpoint | Question | Checks |
 |---|---|---|
-| `GET /healthz` | Is this process broken beyond recovery? | **Nothing.** |
+| `GET /livez` | Is this process broken beyond recovery? | **Nothing.** |
+| `GET /healthz` | Compatibility alias for liveness. | **Nothing.** |
 | `GET /readyz` | Can it serve traffic right now? | Dependencies. |
 | `GET /health` | What is the state of everything? | Dependencies, with latency. |
 
@@ -18,12 +19,12 @@ Conflating the two is the classic outage: a liveness probe that pings the
 database means a database blip **restarts every replica simultaneously**,
 turning a recoverable dependency failure into a total one.
 
-If `/healthz` can answer, the process is alive. Point the liveness probe
-there and nowhere else.
+If `/livez` can answer, the process is alive. Point the liveness probe there
+and nowhere else. `/healthz` remains as a compatibility alias.
 
 ```yaml
 livenessProbe:
-  httpGet: { path: /healthz, port: 8080 }
+  httpGet: { path: /livez, port: 8080 }
   periodSeconds: 10
 readinessProbe:
   httpGet: { path: /readyz, port: 8080 }
@@ -127,7 +128,7 @@ kills it before it is ready:
 
 ```yaml
 startupProbe:
-  httpGet: { path: /healthz, port: 8080 }
+  httpGet: { path: /livez, port: 8080 }
   failureThreshold: 30
   periodSeconds: 2
 ```

@@ -6,7 +6,7 @@ else it does happens on a schedule.
 ```bash
 go run ./worker
 
-curl localhost:8082/healthz
+curl localhost:8082/livez
 curl localhost:8082/health
 ```
 

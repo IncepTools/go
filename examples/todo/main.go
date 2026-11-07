@@ -4,7 +4,7 @@
 //
 //	go run ./examples/todo
 //
-//	curl localhost:8080/healthz
+//	curl localhost:8080/livez
 //	curl localhost:8080/readyz
 //
 //	ACC=11111111-1111-1111-1111-111111111111
@@ -68,7 +68,7 @@ func run() error {
 			Identity: headerIdentity,
 			AccessLog: middleware.AccessLogOptions{
 				LogSuccess:    true,
-				SkipPaths:     []string{"/healthz", "/readyz"},
+				SkipPaths:     []string{"/livez", "/healthz", "/readyz"},
 				SlowThreshold: 500 * time.Millisecond,
 			},
 			SecureHeaders: &middleware.SecureHeadersOptions{},

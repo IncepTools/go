@@ -4,7 +4,7 @@
 //
 //	go run ./minimal
 //	curl localhost:8080/api/v1/greeter/hello/world
-//	curl localhost:8080/healthz
+//	curl localhost:8080/livez
 //
 // Everything else in the framework is optional. This is the floor.
 package main

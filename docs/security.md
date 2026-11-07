@@ -202,7 +202,8 @@ with another's and return them somebody else's response body.
 - [ ] Rate limiting is keyed on the account, backed by a shared store.
 - [ ] CORS lists origins explicitly.
 - [ ] HSTS is on in production and off in development.
-- [ ] `/health` is behind authentication; `/healthz` and `/readyz` are not.
+- [ ] `/health` is behind authentication; `/livez`, `/healthz`, and `/readyz`
+  are not.
 - [ ] `X-Request-Id` is stripped at the edge.
 - [ ] `govulncheck` is in CI.
 

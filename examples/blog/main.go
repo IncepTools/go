@@ -124,7 +124,7 @@ func run() error {
 			Identity: headerIdentity,
 			AccessLog: middleware.AccessLogOptions{
 				LogSuccess: true,
-				SkipPaths:  []string{"/healthz", "/readyz"},
+				SkipPaths:  []string{"/livez", "/healthz", "/readyz"},
 			},
 		},
 	})

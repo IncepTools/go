@@ -591,11 +591,15 @@ func run() error {
 		Middleware: middleware.ChainOptions{
 			Timeout: cfg.RequestTimeout,
 			AccessLog: middleware.AccessLogOptions{
-				SkipPaths:     []string{"/healthz", "/readyz"},
+				SkipPaths:     []string{"/livez", "/healthz", "/readyz"},
 				SlowThreshold: time.Second,
 			},
 		},
 	})
+
+	// Optional OpenTelemetry setup: create tel before inceptools.New and add
+	// Telemetry: tel to the Options below. Exporters are intentionally selected
+	// by the service rather than by generated code.
 
 	// Supply the dependencies built outside the container, then mount the
 	// domains:

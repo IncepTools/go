@@ -7,7 +7,7 @@
 //	container        → providers registered, nothing constructed yet
 //	middleware       → request id, recover, headers, logging, identity, timeout
 //	routes           → every app mounted under the version prefix, and recorded
-//	health           → /healthz (liveness), /readyz (readiness), /health (detail)
+//	health           → /livez and /healthz (liveness), /readyz (readiness), /health (detail)
 //	lifecycle        → OnInit, listen, OnReady, signal, drain, OnShutdown
 //
 // A minimal service:
@@ -99,7 +99,7 @@ type Options struct {
 
 	// DrainTimeout bounds shutdown. Default 25s.
 	DrainTimeout time.Duration
-	// DisableHealthRoutes skips /healthz, /readyz and /health, for a service
+	// DisableHealthRoutes skips /livez, /healthz, /readyz and /health, for a service
 	// that publishes its own.
 	DisableHealthRoutes bool
 	// HealthPrefix moves the health endpoints. Default "" (service root), so
@@ -192,6 +192,7 @@ func New(opt Options) *Application {
 		if opt.HealthPrefix != "" {
 			hr = f.Group(opt.HealthPrefix)
 		}
+		hr.Get("/livez", health.LiveHandler())
 		hr.Get("/healthz", health.LiveHandler())
 		hr.Get("/readyz", health.ReadyHandler(app.Health))
 		hr.Get("/health", health.DetailHandler(app.Health))

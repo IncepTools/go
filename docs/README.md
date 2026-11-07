@@ -44,7 +44,11 @@ is a convention that gets dropped the first time it is inconvenient.
 |---|---|
 | [Caching](caching.md) | Memory and Redis, and why a cache failure is never a request failure. |
 | [Events](events.md) | Typed in-process events, detached contexts, contained panics. |
+| [Event emitter example](event-emitter.md) | A complete module/controller example using the typed event bus. |
 | [Task scheduling](task-scheduling.md) | Cron and intervals, singleton across replicas, overlap-safe. |
+| [Queues](queues.md) | Retrying in-process workers, backpressure, dead letters and draining. |
+| [Webhooks](webhooks.md) | Raw-body HMAC verification, replay protection and durable acceptance. |
+| [Server-sent events](sse.md) | Framing, heartbeats, reconnects, disconnects and scale. |
 | [Distributed locks](locks.md) | Locks that only release their own, and what they cannot promise. |
 | [Idempotency](idempotency.md) | `Idempotency-Key`, so a retried POST does not act twice. |
 | [Transactional outbox](outbox.md) | A side effect as durable as the write that caused it. |

@@ -122,7 +122,7 @@ response, recovered panics, access logging, graceful shutdown, and
 
 ## Examples
 
-Four runnable services, each needing nothing installed:
+Nine runnable services, each needing nothing installed:
 
 ```bash
 cd examples
@@ -130,12 +130,20 @@ go run ./minimal    # :8080  the floor — one domain, one route, ~60 lines
 go run ./todo       # :8080  in-memory CRUD, events, a scheduled purge
 go run ./blog       # :8081  SQLite: migrations, transactions, an outbox
 go run ./worker     # :8082  no API at all — schedules and a drain
+go run ./webhooks     # :8084  signed webhook verification
+go run ./queues       # :8085  retrying workers
+go run ./scheduling   # :8086  singleton scheduled jobs
+go run ./sse          # :8087  server-sent events
+go run ./event-emitter # :8088 typed in-process events
 ```
 
 [`examples/`](examples/) explains what each one demonstrates and what to try
 against it. [`blog`](examples/blog) is the one to read if you want to see the
 data layer; [`worker`](examples/worker) shows that a module does not have to
-serve routes.
+serve routes. The dedicated [`webhooks`](examples/webhooks),
+[`queues`](examples/queues), [`scheduling`](examples/scheduling), [`sse`](examples/sse)
+and [`event-emitter`](examples/event-emitter) examples each focus on one
+feature.
 
 ## The shape
 
@@ -395,7 +403,7 @@ src/            all library code
 tests/          every test, mirroring src/ and internal/
 internal/       the CLI's own packages — unreachable from outside
 cmd/icpt/       the CLI
-examples/       four runnable services — a separate Go module
+examples/       nine runnable services — a separate Go module
 docs/           one page per capability
 inceptools.go   the application factory, at the module root
 ```

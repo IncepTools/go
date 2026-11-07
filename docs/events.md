@@ -136,3 +136,4 @@ async subscriber, `bus.Wait()` blocks until the in-flight handlers finish.
 
 - [Transactional outbox](outbox.md) — when the effect must survive a crash.
 - [Lifecycle](lifecycle.md) — draining the bus on shutdown.
+- [Event emitter example](event-emitter.md) — the complete runnable module.

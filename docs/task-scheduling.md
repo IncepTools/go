@@ -161,3 +161,5 @@ the [outbox](outbox.md) is how work gets into one without losing it.
 ## Next
 
 - [Distributed locks](locks.md) · [Lifecycle](lifecycle.md)
+
+The dedicated runnable example is [`examples/scheduling`](../examples/scheduling).

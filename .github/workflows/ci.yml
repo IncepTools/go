@@ -64,7 +64,7 @@ jobs:
           go test -coverpkg=./src/...,./internal/...,. \
                   -coverprofile=coverage.out -covermode=atomic ./...
           go tool cover -func=coverage.out | tail -1
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v7
         continue-on-error: true
         with:
           files: coverage.out

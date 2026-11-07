@@ -1,0 +1,24 @@
+# Binaries
+/bin/
+/dist/
+icpt
+*.exe
+*.test
+
+# Coverage
+*.out
+coverage.*
+
+# Local environment — never commit a DSN
+.env
+.env.*
+!.env.example
+
+# Ad-hoc route dumps. A dump you want diffed in review is committed on purpose.
+/routes.local.json
+
+# Editors
+.idea/
+.vscode/
+*.swp
+.DS_Store

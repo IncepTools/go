@@ -1,0 +1,51 @@
+name: Bug report
+description: Something behaves differently from what is documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: a stack trace or a failing test says more than a
+        paragraph of description, and is usually faster to write.
+
+  - type: input
+    id: version
+    attributes:
+      label: inceptools version
+      placeholder: v0.1.0, or a commit SHA
+    validations:
+      required: true
+
+  - type: input
+    id: go
+    attributes:
+      label: Go version
+      placeholder: "go version go1.26.0 darwin/arm64"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: Paste the error or the failing output, not a summary of it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Smallest reproduction
+      description: >
+        A failing test against this repository is ideal. Otherwise, the
+        shortest main.go or icpt command that shows it.
+      render: go
+    validations:
+      required: true

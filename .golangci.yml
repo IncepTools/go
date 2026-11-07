@@ -1,0 +1,75 @@
+# Lint configuration for inceptools.
+#
+# The rules enabled here catch defects rather than enforce taste. A linter
+# that fails a build over a comment's wording trains people to disable the
+# linter.
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - errcheck      # an unchecked error is the most common Go defect
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - bodyclose     # a leaked response body exhausts the connection pool
+    - contextcheck  # work that should honour a context but does not
+    - errorlint     # %v on an error loses the chain errors.Is depends on
+    - copyloopvar
+    - gosec
+    - misspell
+    - nilerr        # returning nil after checking an error
+    - rowserrcheck
+    - sqlclosecheck
+    - unconvert
+    - revive
+
+  settings:
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+    gosec:
+      excludes:
+        # The migrator builds statements from a CONFIGURED table name, never
+        # from request input. G201/G202 cannot see that distinction.
+        - G201
+        - G202
+        # This repository is a CLI as well as a library. Its file operations
+        # read paths the operator supplied on the command line or in
+        # icpt.json — there is no privilege boundary for a path traversal to
+        # cross, and the alternative is a tool that cannot open a file.
+        - G304
+        # Generated source, migrations and icpt.json are meant to be readable
+        # and committed. 0600 would mean a teammate cannot read the file the
+        # generator just wrote.
+        - G301
+        - G306
+
+  exclusions:
+    rules:
+      # Tests may ignore errors in setup and assert on behaviour instead.
+      - path: _test\.go
+        linters: [errcheck, gosec, bodyclose]
+      # These are strings of Go source, not Go source.
+      # These are strings of Go source and shell, not Go source. The
+      # "credential" gosec finds is postgres:postgres in an .env.example.
+      - path: internal/scaffold/templates\.go
+        linters: [misspell, revive, gosec]
+      # A test may deliberately return nil after observing an error.
+      - path: _test\.go
+        linters: [nilerr]
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/IncepTools/go

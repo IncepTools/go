@@ -1,0 +1,118 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (go ${{ matrix.go }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Go 1.26 is the floor: Fiber v3 requires it, so this module does
+        # too. Three operating systems, because the CLI writes files and
+        # reads paths.
+        go: ["1.26"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+          cache: true
+
+      - name: Verify formatting
+        if: runner.os == 'Linux'
+        run: |
+          out=$(gofmt -l .)
+          if [ -n "$out" ]; then
+            echo "These files are not gofmt'd:"; echo "$out"; exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      # The race detector is where the DI container, the event bus, the
+      # scheduler and the breaker are actually checked: every one of them is
+      # concurrent, and a data race in any of them is a production defect
+      # that no single-threaded test would ever show.
+      - name: Test
+        run: go test -race -count=1 ./...
+
+  tidy:
+    name: go.mod is tidy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      - run: go mod tidy
+      - name: Fail when tidy changed something
+        run: git diff --exit-code -- go.mod go.sum
+
+  lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
+  generated:
+    name: generated code compiles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      # The scaffolder's output is a promise: `icpt generate` must produce
+      # code that builds and passes the framework's own structure rules. A
+      # unit test can check that it parses; only this checks that it links.
+      - name: Scaffold a module and build it
+        run: |
+          set -euo pipefail
+          go build -o /tmp/icpt ./cmd/icpt
+          work="$(mktemp -d)"
+          cd "$work"
+          printf 'module example.com/generated\n\ngo 1.26\n' > go.mod
+          /tmp/icpt init
+          /tmp/icpt generate module vpc/subnets
+          go mod edit -replace github.com/IncepTools/go="$GITHUB_WORKSPACE"
+          go mod tidy
+          go build ./...
+          go vet ./...
+          /tmp/icpt lint -strict
+
+  vuln:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      - run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...

@@ -271,6 +271,34 @@ func MountApp(r fiber.Router, a App, opt MountOptions) error {
 	return nil
 }
 
+// MountModules mounts a domain's modules directly on r without adding the
+// domain name to the URL. This is useful for a host application whose public
+// API is already rooted at a version prefix while modules retain native
+// ownership, guards, health, lifecycle, and route metadata.
+func MountModules(r fiber.Router, appName, prefix string, modules []Module, opt MountOptions) error {
+	if strings.TrimSpace(appName) == "" {
+		return fmt.Errorf("module: direct mount has an empty app name")
+	}
+	seen := map[string]bool{}
+	for _, m := range modules {
+		if m == nil {
+			continue
+		}
+		name := strings.Trim(m.Name(), "/")
+		if name == "" {
+			return fmt.Errorf("module: direct mount contains a module with an empty name")
+		}
+		if seen[name] {
+			return fmt.Errorf("module: direct mount registers two modules named %q", name)
+		}
+		seen[name] = true
+		if err := mountModule(r, appName, prefix, m, opt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func mountModule(appRouter fiber.Router, appName, appPrefix string, m Module, opt MountOptions) error {
 	name := strings.Trim(m.Name(), "/")
 	modRouter := appRouter.Group("/" + name)

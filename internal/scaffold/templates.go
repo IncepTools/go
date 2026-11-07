@@ -110,7 +110,7 @@ import (
 	"{{.ImportBase}}/constants"
 	"{{.ImportBase}}/entity"
 
-	"github.com/IncepTools/go/data/repo"
+	"github.com/IncepTools/go/src/data/repo"
 )
 
 // {{.Entity}}Repository is the data access for {{.Module}}.
@@ -146,11 +146,11 @@ import (
 	"{{.ImportBase}}/entity"
 	"{{.ImportBase}}/repository"
 
-	"github.com/IncepTools/go/core/ctxkit"
-	"github.com/IncepTools/go/core/errs"
-	"github.com/IncepTools/go/data/gormx"
-	"github.com/IncepTools/go/data/repo"
-	"github.com/IncepTools/go/web/pagination"
+	"github.com/IncepTools/go/src/core/ctxkit"
+	"github.com/IncepTools/go/src/core/errs"
+	"github.com/IncepTools/go/src/data/gormx"
+	"github.com/IncepTools/go/src/data/repo"
+	"github.com/IncepTools/go/src/web/pagination"
 )
 
 // {{.Entity}}Service holds the business rules for {{.Module}}.
@@ -264,12 +264,12 @@ import (
 	"{{.ImportBase}}/dto"
 	"{{.ImportBase}}/service"
 
-	"github.com/IncepTools/go/web/binding"
-	"github.com/IncepTools/go/web/guard"
-	"github.com/IncepTools/go/web/pagination"
-	"github.com/IncepTools/go/web/pipe"
-	"github.com/IncepTools/go/web/response"
-	"github.com/IncepTools/go/web/router"
+	"github.com/IncepTools/go/src/web/binding"
+	"github.com/IncepTools/go/src/web/guard"
+	"github.com/IncepTools/go/src/web/pagination"
+	"github.com/IncepTools/go/src/web/pipe"
+	"github.com/IncepTools/go/src/web/response"
+	"github.com/IncepTools/go/src/web/router"
 )
 
 // {{.Entity}}Controller reads requests, calls the service and renders the
@@ -401,10 +401,10 @@ import (
 	"{{.ImportBase}}/repository"
 	"{{.ImportBase}}/service"
 
-	"github.com/IncepTools/go/core/di"
-	"github.com/IncepTools/go/core/module"
-	"github.com/IncepTools/go/web/guard"
-	"github.com/IncepTools/go/web/router"
+	"github.com/IncepTools/go/src/core/di"
+	"github.com/IncepTools/go/src/core/module"
+	"github.com/IncepTools/go/src/web/guard"
+	"github.com/IncepTools/go/src/web/router"
 )
 
 // Module is the {{.Module}} resource.
@@ -465,8 +465,8 @@ const moduleTestTmpl = `package {{.Package}}_test
 import (
 	"testing"
 
-	"github.com/IncepTools/go/core/module"
-	"github.com/IncepTools/go/testkit"
+	"github.com/IncepTools/go/src/core/module"
+	"github.com/IncepTools/go/src/testkit"
 )
 
 // TestRoutesAreGuarded asserts that every mutating route in this module
@@ -494,8 +494,8 @@ const appTmpl = `package {{.App}}
 import (
 	"errors"
 
-	"github.com/IncepTools/go/core/di"
-	"github.com/IncepTools/go/core/module"
+	"github.com/IncepTools/go/src/core/di"
+	"github.com/IncepTools/go/src/core/module"
 	// "{{.GoModule}}/{{.AppsDir}}/{{.App}}/{{.Package}}"
 )
 
@@ -551,9 +551,9 @@ import (
 	"time"
 
 	"github.com/IncepTools/go"
-	"github.com/IncepTools/go/core/config"
-	"github.com/IncepTools/go/core/logx"
-	"github.com/IncepTools/go/web/middleware"
+	"github.com/IncepTools/go/src/core/config"
+	"github.com/IncepTools/go/src/core/logx"
+	"github.com/IncepTools/go/src/web/middleware"
 
 	appconfig "{{.GoModule}}/internal/appconfig"
 )

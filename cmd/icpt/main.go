@@ -24,6 +24,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"runtime/debug"
 	"strings"
 
 	inceptools "github.com/IncepTools/go"
@@ -73,7 +75,7 @@ func run(args []string) error {
 	case "doctor":
 		return cmdDoctor(args[1:])
 	case "version", "-v", "--version":
-		fmt.Println("inceptools " + inceptools.Version)
+		printVersion()
 		return nil
 	case "help", "-h", "--help":
 		usage()
@@ -81,6 +83,38 @@ func run(args []string) error {
 	default:
 		usage()
 		return fmt.Errorf("unknown command %q", args[0])
+	}
+}
+
+// Build information, set by the release build:
+//
+//	-ldflags "-X main.version=v1.2.3 -X main.commit=$(git rev-parse HEAD)"
+//
+// They default to "dev" so a `go install` from source is honest about being
+// an untagged build rather than claiming a version it does not have.
+var (
+	version = "dev"
+	commit  = ""
+	date    = ""
+)
+
+func printVersion() {
+	fmt.Printf("icpt %s\n", version)
+	fmt.Printf("  framework %s\n", inceptools.Version)
+	if commit != "" {
+		fmt.Printf("  commit    %s\n", commit)
+	}
+	if date != "" {
+		fmt.Printf("  built     %s\n", date)
+	}
+	fmt.Printf("  go        %s %s/%s\n", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+
+	// When ldflags were not set, the module's own build info still knows
+	// what version `go install module@v1.2.3` fetched.
+	if version == "dev" {
+		if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+			fmt.Printf("  module    %s\n", bi.Main.Version)
+		}
 	}
 }
 
@@ -366,18 +400,30 @@ func cmdDoctor(args []string) error {
 	check(project.FileName+" is valid", cerr == nil, errText(cerr))
 	if cerr == nil {
 		if cfg.Found {
+			dbs := "none"
+			if cfg.DeclaresDatabases() {
+				dbs = strings.Join(cfg.DatabaseNames(), " ")
+			}
 			fmt.Printf("      apps=%s tests=%s databases=[%s]\n",
-				cfg.Layout.Apps, cfg.Layout.Tests, strings.Join(cfg.DatabaseNames(), " "))
+				cfg.Layout.Apps, cfg.Layout.Tests, dbs)
 		} else {
 			fmt.Printf("      not present; using defaults (run: icpt init)\n")
 		}
-		for _, t := range cfg.Targets() {
-			_, set := os.LookupEnv(t.EnvVariable)
-			check("DSN for "+t.Name+" ("+t.EnvVariable+")", set,
-				"export "+t.EnvVariable+" before running icpt migrate")
-			_, derr := os.Stat(t.MigrationPath)
-			check("migrations for "+t.Name+" ("+t.Dialect+")", derr == nil,
-				"expected "+t.MigrationPath+"; run: icpt create <name>")
+		// Only report on databases the project actually declares. Targets
+		// always yields a synthetic "default" so that migrate works with
+		// no configuration at all, and complaining about that one would
+		// mean every library repository fails doctor.
+		if cfg.DeclaresDatabases() {
+			for _, t := range cfg.Targets() {
+				_, set := os.LookupEnv(t.EnvVariable)
+				check("DSN for "+t.Name+" ("+t.EnvVariable+")", set,
+					"export "+t.EnvVariable+" before running icpt migrate")
+				_, derr := os.Stat(t.MigrationPath)
+				check("migrations for "+t.Name+" ("+t.Dialect+")", derr == nil,
+					"expected "+t.MigrationPath+"; run: icpt create <name>")
+			}
+		} else {
+			fmt.Printf("      no migration targets configured\n")
 		}
 		appsPath := cfg.AppsPath()
 		_, statErr := os.Stat(appsPath)

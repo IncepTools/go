@@ -139,6 +139,9 @@ type Config struct {
 	// extra holds keys this version does not know about, so writing the file
 	// back cannot drop another tool's configuration.
 	extra map[string]json.RawMessage
+	// hadComments records that the file on disk carried comments, which a
+	// rewrite would discard.
+	hadComments bool
 }
 
 // Dialects are the SQL engines the migrator supports, with the aliases
@@ -254,12 +257,16 @@ func Load(dir string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("project: reading %s: %w", path, err)
 	}
-	if err := json.Unmarshal(raw, cfg); err != nil {
+	// Comments and trailing commas are accepted. A file people are told to
+	// record decisions in has to allow a comment next to the decision.
+	clean := stripJSONC(raw)
+	if err := json.Unmarshal(clean, cfg); err != nil {
 		return nil, fmt.Errorf("project: %s is not valid JSON: %w", path, err)
 	}
-	if err := json.Unmarshal(raw, &cfg.extra); err != nil {
+	if err := json.Unmarshal(clean, &cfg.extra); err != nil {
 		return nil, fmt.Errorf("project: %s is not a JSON object: %w", path, err)
 	}
+	cfg.hadComments = hasComments(raw, clean)
 	cfg.Root = filepath.Dir(path)
 	cfg.Found = true
 	cfg.applyDefaults()
@@ -403,6 +410,18 @@ type Target struct {
 	NoLock        bool
 }
 
+// DeclaresDatabases reports whether the file actually configures a
+// migration target, in either shape.
+//
+// Targets always returns at least one, because `icpt migrate` in a project
+// with no configuration should still do the obvious thing. That synthetic
+// default is useful for the migrator and misleading for anything that
+// reports on what the project HAS — `icpt doctor` should not complain
+// about a database nobody asked for.
+func (c *Config) DeclaresDatabases() bool {
+	return len(c.Databases) > 0 || c.EnvVariable != "" || c.MigrationPath != ""
+}
+
 // Targets resolves every configured database into a deterministic,
 // name-sorted list.
 //
@@ -512,8 +531,17 @@ func (c *Config) SelectOne(name string) (Target, error) {
 		FileName, len(targets), strings.Join(c.DatabaseNames(), ", "))
 }
 
+// HadComments reports whether the file on disk carried comments or trailing
+// commas. Save cannot preserve them — encoding/json has nowhere to put them
+// — so a caller about to rewrite the file should say so first.
+func (c *Config) HadComments() bool { return c.hadComments }
+
 // Save writes the configuration, preserving any keys this version does not
 // know about.
+//
+// It does NOT preserve comments: they are stripped before parsing and there
+// is nowhere in the decoded value to keep them. Check HadComments and warn
+// before overwriting somebody's annotated file.
 func (c *Config) Save(path string) error {
 	merged := map[string]json.RawMessage{}
 	for k, v := range c.extra {

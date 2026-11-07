@@ -37,17 +37,17 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/IncepTools/go/core/di"
-	"github.com/IncepTools/go/core/lifecycle"
-	"github.com/IncepTools/go/core/logx"
-	"github.com/IncepTools/go/core/module"
-	"github.com/IncepTools/go/web/filter"
-	"github.com/IncepTools/go/web/guard"
-	"github.com/IncepTools/go/web/health"
-	"github.com/IncepTools/go/web/interceptor"
-	"github.com/IncepTools/go/web/middleware"
-	"github.com/IncepTools/go/web/response"
-	"github.com/IncepTools/go/web/router"
+	"github.com/IncepTools/go/src/core/di"
+	"github.com/IncepTools/go/src/core/lifecycle"
+	"github.com/IncepTools/go/src/core/logx"
+	"github.com/IncepTools/go/src/core/module"
+	"github.com/IncepTools/go/src/web/filter"
+	"github.com/IncepTools/go/src/web/guard"
+	"github.com/IncepTools/go/src/web/health"
+	"github.com/IncepTools/go/src/web/interceptor"
+	"github.com/IncepTools/go/src/web/middleware"
+	"github.com/IncepTools/go/src/web/response"
+	"github.com/IncepTools/go/src/web/router"
 )
 
 // Version is the framework's own version, reported on the service's health
@@ -307,7 +307,7 @@ func (a *Application) Run(ctx context.Context) error {
 	defer cancel()
 	closeErr := a.Container.Close(closeCtx)
 
-	a.Log.Info("stopped", "service", a.opt.Service)
+	a.Log.Info("stopped")
 	return errors.Join(runErr, closeErr)
 }
 

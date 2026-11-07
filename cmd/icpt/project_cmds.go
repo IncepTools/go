@@ -12,7 +12,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/IncepTools/go/internal/project"
-	"github.com/IncepTools/go/web/router"
+	"github.com/IncepTools/go/src/web/router"
 )
 
 func cmdInit(args []string) error {
@@ -29,6 +29,11 @@ func cmdInit(args []string) error {
 	cfg, err := project.Load(*root)
 	if err != nil {
 		return err
+	}
+	if cfg.Found && cfg.HadComments() && *force {
+		return fmt.Errorf(
+			"%s carries comments, and rewriting it would discard them.\n"+
+				"Edit it by hand, or remove the comments first", path)
 	}
 	if cfg.Found && !*force {
 		// Rewriting would reformat a file another tool also writes. Say what

@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+
+	"github.com/IncepTools/go/src/web/response"
 )
 
 // Metrics is an in-process HTTP request collector.
@@ -46,7 +48,12 @@ func (m *Metrics) Middleware() fiber.Handler {
 	return func(c fiber.Ctx) error {
 		start := time.Now()
 		err := c.Next()
+		// Take the status from the error when there is one: the exception
+		// filter has not run yet, so the response still carries the default.
 		status := c.Response().StatusCode()
+		if err != nil {
+			status = response.StatusForError(err)
+		}
 		m.record(c.Method(), routeName(c), status, time.Since(start))
 		return err
 	}

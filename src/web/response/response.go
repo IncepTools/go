@@ -17,6 +17,7 @@
 package response
 
 import (
+	"errors"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -236,6 +237,25 @@ func StatusFor(kind errs.Kind) int {
 	default:
 		return fiber.StatusInternalServerError
 	}
+}
+
+// StatusForError is the status an error will END UP with once the exception
+// filter has run.
+//
+// Instrumentation needs this. A middleware observes `c.Next()` returning an
+// error, but the status on the response is still the default at that point:
+// Fiber invokes the error handler after the whole chain has unwound. A
+// collector that reads the status code there records a failed request as a
+// 200 — the route that fails every time looks perfectly healthy.
+func StatusForError(err error) int {
+	if err == nil {
+		return fiber.StatusOK
+	}
+	var fiberErr *fiber.Error
+	if errors.As(err, &fiberErr) {
+		return fiberErr.Code
+	}
+	return StatusFor(errs.KindOf(err))
 }
 
 // Fail writes the HTTP response for any error.

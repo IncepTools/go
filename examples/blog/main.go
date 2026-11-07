@@ -86,7 +86,9 @@ func run() error {
 	})
 
 	dsn := os.Getenv("BLOG_DATABASE_URL")
-	cleanupDB := func() {}
+	cleanupDB := func() {
+		// No cleanup is needed when the caller supplies BLOG_DATABASE_URL.
+	}
 	if dsn == "" {
 		dbFile, err := os.CreateTemp("", "inceptools-blog-*.db")
 		if err != nil {

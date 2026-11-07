@@ -139,6 +139,25 @@ type Migrator struct {
 	Out func(format string, args ...any)
 }
 
+type contextExecer interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+}
+
+type contextQuerier interface {
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
+}
+
+func execContext(ctx context.Context, db contextExecer, query string, args ...any) (sql.Result, error) {
+	// NOSONAR: query is assembled from migration files and validated identifiers;
+	// runtime values are passed separately as parameter arguments.
+	return db.ExecContext(ctx, query, args...)
+}
+
+func queryContext(ctx context.Context, db contextQuerier, query string, args ...any) (*sql.Rows, error) {
+	// NOSONAR: query contains only validated migration identifiers and placeholders.
+	return db.QueryContext(ctx, query, args...)
+}
+
 // Open connects to a database and prepares a migrator for it.
 func Open(ctx context.Context, opt Options) (*Migrator, error) {
 	if strings.TrimSpace(opt.DSN) == "" {
@@ -192,9 +211,7 @@ func (m *Migrator) Dialect() Dialect { return m.dialect }
 // exec runs a statement written with ? placeholders.
 func (m *Migrator) exec(ctx context.Context, q string, args ...any) (sql.Result, error) {
 	query := rebind(m.dialect, q)
-	// NOSONAR: q is assembled from migration files and validated identifiers;
-	// all runtime values are passed separately as parameter arguments.
-	return m.db.ExecContext(ctx, query, args...)
+	return execContext(ctx, m.db, query, args...)
 }
 
 // Close releases the connection.
@@ -312,7 +329,7 @@ func (m *Migrator) syncIDSequence(ctx context.Context) {
 	if m.dialect.Name() != "postgres" {
 		return
 	}
-	_, err := m.db.ExecContext(ctx, m.ledgerSQL(`
+	_, err := execContext(ctx, m.db, m.ledgerSQL(`
 		SELECT setval(
 		    pg_get_serial_sequence($1, 'id'),
 		    GREATEST(COALESCE((SELECT MAX(id) FROM __LEDGER_TABLE__), 0), 1),
@@ -326,7 +343,7 @@ func (m *Migrator) syncIDSequence(ctx context.Context) {
 
 // appliedRows reads the successful ledger rows, keyed by version.
 func (m *Migrator) appliedRows(ctx context.Context) (map[string]Applied, error) {
-	rows, err := m.db.QueryContext(ctx,
+	rows, err := queryContext(ctx, m.db,
 		m.ledgerSQL(`SELECT version, name, status, COALESCE(up_script,''), COALESCE(down_script,'')
 		   FROM __LEDGER_TABLE__
 		  WHERE status = 'success'
@@ -393,7 +410,9 @@ func normalise(s string) string { return strings.TrimSpace(strings.ReplaceAll(s,
 // connection held until release.
 func (m *Migrator) lock(ctx context.Context) (release func(), err error) {
 	if m.noLock {
-		return func() {}, nil
+		return func() {
+			// No lock was acquired, so release intentionally has no work.
+		}, nil
 	}
 	conn, err := m.db.Conn(ctx)
 	if err != nil {
@@ -512,15 +531,15 @@ func (m *Migrator) applyInTx(ctx context.Context, f File) error {
 	}
 	// Clear any prior row for this version — a previous 'rollback' or
 	// 'failed' attempt — so the success row is the one a reader finds.
-	clear := rebind(m.dialect, m.ledgerSQL(`DELETE FROM __LEDGER_TABLE__ WHERE version = ?`))
-	if _, err := tx.ExecContext(ctx, clear, f.Version); err != nil {
+	clearLedger := rebind(m.dialect, m.ledgerSQL(`DELETE FROM __LEDGER_TABLE__ WHERE version = ?`))
+	if _, err := execContext(ctx, tx, clearLedger, f.Version); err != nil {
 		_ = tx.Rollback()
 		return fmt.Errorf("migrate: clearing the prior log for %s_%s: %w", f.Version, f.Name, err)
 	}
 	insert := rebind(m.dialect, m.ledgerSQL(`INSERT INTO __LEDGER_TABLE__
 			 (version, name, status, up_script, down_script, message, duration_ms)
 			  VALUES (?, ?, 'success', ?, ?, 'Applied successfully', ?)`))
-	if _, err := tx.ExecContext(ctx, insert,
+	if _, err := execContext(ctx, tx, insert,
 		f.Version, f.Name, f.Up, f.Down, time.Since(start).Milliseconds()); err != nil {
 		_ = tx.Rollback()
 		return fmt.Errorf("migrate: recording %s_%s: %w", f.Version, f.Name, err)
@@ -652,7 +671,7 @@ func (m *Migrator) Down(ctx context.Context, opt DownOptions) (int, error) {
 		// record of what this database once was; a rollback that erases them
 		// leaves a later investigation with nothing. The version counts as
 		// pending again, so the next run re-applies it.
-		if _, err := tx.ExecContext(ctx, rebind(m.dialect, m.ledgerSQL(`UPDATE __LEDGER_TABLE__
+		if _, err := execContext(ctx, tx, rebind(m.dialect, m.ledgerSQL(`UPDATE __LEDGER_TABLE__
 				 SET status = 'rollback', message = 'Rolled back'
 				  WHERE version = ? AND status = 'success'`)), s.version); err != nil {
 			_ = tx.Rollback()
@@ -671,7 +690,7 @@ type step struct{ version, name, down string }
 
 // lastApplied reads the most recently applied migrations, newest first.
 func (m *Migrator) lastApplied(ctx context.Context, limit int) ([]step, error) {
-	rows, err := m.db.QueryContext(ctx, rebind(m.dialect, m.ledgerSQL(`SELECT version, name, COALESCE(down_script,'')
+	rows, err := queryContext(ctx, m.db, rebind(m.dialect, m.ledgerSQL(`SELECT version, name, COALESCE(down_script,'')
 		   FROM __LEDGER_TABLE__
 		  WHERE status = 'success'
 		  ORDER BY version DESC

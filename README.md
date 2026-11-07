@@ -629,8 +629,10 @@ release workflow's own OIDC identity, and each ships an SBOM.
 
 ## Status
 
-**v1.0.0.** Built on Fiber v3 and GORM, both stable. The public API is now
-covered by the compatibility policy in [RELEASING.md](RELEASING.md).
+**v1.1.0.** Built on Fiber v3 and GORM, both stable. The public API is
+covered by the compatibility policy in [RELEASING.md](RELEASING.md); v1.1.0
+added OpenTelemetry, a Prometheus collector, the `/livez` probe, a reload
+phase and `net/http.Handler` hosting, all additive.
 The next roadmap phase is contract-first: OpenAPI 3.1 generation and breaking
 change checks, a transport-neutral execution context, and a checked provider
 graph. Later phases add durable broker adapters, broader security policies,

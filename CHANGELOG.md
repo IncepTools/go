@@ -9,24 +9,75 @@ change is listed under **Changed** with what to do about it.
 
 ## [Unreleased]
 
+No changes yet.
+
+## [1.1.0] — 2026-11-07
+
+Observability, a second hosting mode, and the probe rename. Everything here is
+additive: `gorelease` reports no incompatible change against v1.0.0.
+
 ### Added
 
-- `web/observability` provides an opt-in request metrics collector and
-  Prometheus-compatible handler. Route labels use the matched template, which
-  keeps high-cardinality path parameters out of the series.
-- `inceptools.Options.Metrics` wires the collector into the request pipeline
-  and exposes `/metrics` by default.
-- `web/middleware.RequestID` accepts valid W3C `traceparent` headers for
-  cross-service trace correlation while keeping request IDs separate.
-- `core/telemetry` adds provider-based OpenTelemetry tracing and metrics with
-  lifecycle shutdown, automatic HTTP instrumentation, and execution spans for
-  scheduler jobs, queue attempts, event handlers, and arbitrary functions.
-- `core/telemetry` can now configure standard OTLP/HTTP trace and metric
-  exporters from `OTEL_*` environment variables or `telemetry.OTLPConfig`,
-  keeping SigNoz, collectors, APMs, and custom providers vendor-neutral.
-- Applications now expose `/livez` plus the `/healthz` compatibility alias,
-  support `OnReload`/`Reload` for SIGHUP and serverless control planes, and
-  implement `net/http.Handler` for Lambda-style adapters.
+- `core/telemetry` is the OpenTelemetry integration: provider-based tracing and
+  metrics, W3C context propagation, HTTP instrumentation, and execution spans
+  for scheduler jobs, queue attempts, event handlers and arbitrary functions
+  through `telemetry.Start` and `telemetry.Run`. Providers are flushed by the
+  lifecycle, so nothing batched is dropped at shutdown.
+- `core/telemetry` configures standard OTLP/HTTP exporters from
+  `telemetry.OTLPConfig` or the `OTEL_*` environment variables, covering
+  SigNoz, an OpenTelemetry Collector, Elastic APM, Jaeger, Grafana and
+  Honeycomb through one vendor-neutral surface. It is opt-in **by endpoint**:
+  enabling telemetry never makes the process dial `localhost:4318` on its own.
+- `inceptools.Options.Telemetry` installs the HTTP middleware and registers the
+  component with the lifecycle.
+- `web/observability` is the alternative for a service that wants a local
+  Prometheus text endpoint without an exporter. Route labels use the matched
+  template, so `/users/:id` stays one series instead of one per user id.
+- `inceptools.Options.Metrics` and `MetricsPath` wire that collector in and
+  expose `/metrics`. Both collectors are opt-in: upgrading does not add a route
+  a service did not ask for.
+- `/livez` is the liveness probe, with `/healthz` kept as a compatibility
+  alias. `/healthz` reads like "the health endpoint" and invites the outage the
+  three probes exist to prevent — a liveness probe wired to dependency checks,
+  so one database blip restarts every replica at once.
+- `Application.Prepare`, `Application.ServeHTTP`, `Application.OnReload` and
+  `Application.Reload` make the application hostable by a Lambda or other
+  `net/http` adapter. `Prepare` runs the boot phases once per cold start and is
+  safe to call on every invocation; `Reload` is the signal-free equivalent of
+  SIGHUP.
+- `lifecycle.Reloader`, `Hook.Reload`, `Registry.AddReload` and
+  `Registry.Reload` add the reload phase. Callbacks are independent: one
+  failure does not stop the others, and the process keeps serving the last
+  known-good configuration.
+- `module.MountModules` mounts a domain's modules directly on a router without
+  the domain in the path, for a host whose API is already rooted at a version
+  prefix. Ownership is unchanged — the route table, health registry and
+  lifecycle still record each module under its qualified name.
+- `response.StatusForError` resolves the status an error will be answered with,
+  for instrumentation that must label a request before the exception filter has
+  run.
+- `web/middleware.HeaderTraceParent`, and `RequestID` now adopts a valid
+  inbound W3C `traceparent` as the trace id while keeping the request id
+  separate. Malformed values are rejected rather than trusted.
+- An `examples/serverless` service, hosting the same application through
+  `http.Handler`. All ten examples now share one layout — domain, module,
+  constants, dto, service, controller — with each module owning its own queue,
+  schedule, subscriptions and reloadable configuration.
+
+### Fixed
+
+- Request metrics and spans recorded a handler that returned an error as a
+  `200`. The status was read before the exception filter ran, so a route
+  failing on every request appeared as healthy 2xx traffic with a flat error
+  rate.
+- A server span was marked as an error whenever a handler returned a non-nil
+  error, which made the error rate depend on handler style: a 404 written with
+  `SendStatus` was healthy while the same 404 returned as `errs.NotFound` was
+  not. Span status now follows the HTTP status, and 5xx alone marks it.
+- A failing `Ready` hook made `lifecycle.Run` return immediately, leaving the
+  listener accepting traffic and every initialised hook unshut — the process
+  looked alive while serving against half-built dependencies. It now stops the
+  listener and drains within the budget before returning.
 
 ## [1.0.0] — 2026-11-07
 
@@ -162,5 +213,6 @@ First stable release.
 - Documentation under `docs/`, one page per capability, and nine runnable
   example services under `examples/`.
 
-[Unreleased]: https://github.com/IncepTools/go/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/IncepTools/go/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/IncepTools/go/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/IncepTools/go/releases/tag/v1.0.0

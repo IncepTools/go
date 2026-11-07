@@ -12,7 +12,7 @@ app := inceptools.New(inceptools.Options{
 		Timeout:  15 * time.Second,
 		Identity: resolveIdentity,
 		AccessLog: middleware.AccessLogOptions{
-			SkipPaths:     []string{"/healthz", "/readyz"},
+			SkipPaths:     []string{"/livez", "/healthz", "/readyz"},
 			SlowThreshold: time.Second,
 		},
 		SecureHeaders: &middleware.SecureHeadersOptions{
@@ -26,6 +26,11 @@ app := inceptools.New(inceptools.Options{
 
 `middleware.Chain` returns them in the order that is correct. Use it unless
 you know why you are deviating.
+
+When `inceptools.Options.Telemetry` is set, the application adds OpenTelemetry
+middleware after this chain. It extracts W3C trace context, starts the server
+span, records route/status/duration metrics, records handler errors, and puts
+the span context on the request before the route runs.
 
 ## Why the order is not a style choice
 
@@ -63,9 +68,12 @@ Establishes the correlation id and puts it on the Fiber locals, the Go
 context, and the response as `X-Request-Id` and `X-Trace-Id`.
 
 It **trusts** an inbound `X-Request-Id`, which is what makes a trace span a
-gateway, a service and a worker. That trust is only safe behind your own edge:
-a public listener should strip the header there, or it becomes a log-injection
-vector.
+gateway, a service and a worker. When a caller sends a valid W3C `traceparent`,
+the middleware also uses its trace id for `X-Trace-Id` and the Go context. That
+is propagation and correlation, not an exporter-backed span; install an
+OpenTelemetry SDK when the service needs sampled spans. Trust these headers
+only behind your own edge: a public listener should strip them there, or they
+become a log-injection vector.
 
 ### Recover
 
@@ -85,7 +93,7 @@ Logs failures and slow requests. Successes are off by default:
 
 ```go
 middleware.AccessLogOptions{
-	SkipPaths:     []string{"/healthz", "/readyz", "/metrics"},
+	SkipPaths:     []string{"/livez", "/healthz", "/readyz", "/metrics"},
 	SlowThreshold: time.Second,
 	LogSuccess:    false,
 }
@@ -163,7 +171,7 @@ use `AllowOriginFunc`.
 	Max:     600,
 	Window:  time.Minute,
 	KeyFunc: func(c fiber.Ctx) string { return accountKey(c) },
-	Skip:    func(c fiber.Ctx) bool { return c.Path() == "/healthz" },
+	Skip:    func(c fiber.Ctx) bool { return c.Path() == "/livez" || c.Path() == "/healthz" },
 	Store:   redisStore,
 }
 ```

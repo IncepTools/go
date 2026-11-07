@@ -11,6 +11,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"runtime/debug"
 	"strings"
@@ -31,6 +32,10 @@ const HeaderRequestID = "X-Request-Id"
 // HeaderTraceID is the header a client quotes in a support ticket.
 const HeaderTraceID = "X-Trace-Id"
 
+// HeaderTraceParent is the W3C trace context header used by gateways and
+// OpenTelemetry-aware clients.
+const HeaderTraceParent = "traceparent"
+
 // RequestID establishes the correlation id for the request and puts it on the
 // Fiber locals, on the Go context and on the response.
 //
@@ -44,16 +49,38 @@ func RequestID() fiber.Handler {
 		if id == "" || len(id) > 200 {
 			id = uuid.NewString()
 		}
-		c.Locals(response.LocalTraceID, id)
+		traceID := id
+		if incoming := traceIDFromParent(c.Get(HeaderTraceParent)); incoming != "" {
+			traceID = incoming
+		}
+		c.Locals(response.LocalTraceID, traceID)
 		c.Locals(response.LocalStartKey, time.Now())
 		c.Set(HeaderRequestID, id)
-		c.Set(HeaderTraceID, id)
+		c.Set(HeaderTraceID, traceID)
 
-		ctx := ctxkit.WithTrace(c.Context(), id)
+		ctx := ctxkit.WithTrace(c.Context(), traceID)
 		ctx = ctxkit.WithRequestID(ctx, id)
 		c.SetContext(ctx)
 		return c.Next()
 	}
+}
+
+// traceIDFromParent extracts only the trace id from a W3C traceparent value.
+// We do not create a child span here; the framework's guarantee is correlation
+// and propagation, while services can install an OpenTelemetry SDK when they
+// need exporter-backed spans.
+func traceIDFromParent(parent string) string {
+	parts := strings.Split(parent, "-")
+	if len(parts) != 4 || len(parts[0]) != 2 || len(parts[1]) != 32 || len(parts[2]) != 16 || len(parts[3]) != 2 {
+		return ""
+	}
+	if parts[1] == strings.Repeat("0", 32) || parts[2] == strings.Repeat("0", 16) {
+		return ""
+	}
+	if _, err := hex.DecodeString(parts[0] + parts[1] + parts[2] + parts[3]); err != nil {
+		return ""
+	}
+	return parts[1]
 }
 
 // Recover turns a panic into a 500 in the standard envelope, with the stack in

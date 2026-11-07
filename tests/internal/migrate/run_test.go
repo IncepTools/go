@@ -302,6 +302,16 @@ func TestCustomLedgerTable(t *testing.T) {
 	}
 }
 
+func TestInvalidLedgerTableIsRefused(t *testing.T) {
+	_, err := migrate.Open(context.Background(), migrate.Options{
+		Name: "test", DSN: filepath.Join(t.TempDir(), "test.db"),
+		Dialect: "sqlite", LedgerTable: "ledger; DROP TABLE users",
+	})
+	if err == nil {
+		t.Fatal("an unsafe ledger table name was accepted")
+	}
+}
+
 func TestUnsupportedDialectIsRefused(t *testing.T) {
 	_, err := migrate.Open(context.Background(), migrate.Options{
 		Name: "x", DSN: "whatever", Dir: t.TempDir(), Dialect: "oracle",

@@ -152,6 +152,9 @@ func Open(ctx context.Context, opt Options) (*Migrator, error) {
 	if table == "" {
 		table = DefaultLedgerTable
 	}
+	if !validLedgerTable(table) {
+		return nil, fmt.Errorf("migrate: invalid ledger table %q; use letters, digits and underscores", table)
+	}
 
 	db, err := sql.Open(d.Driver(), opt.DSN)
 	if err != nil {
@@ -263,11 +266,29 @@ func (m *Migrator) ensureLedger(ctx context.Context) error {
 	return nil
 }
 
-// quotedTable is the only place where the configured ledger table enters SQL.
-// The value comes from trusted project configuration, not request input, and
-// QuoteIdent applies the dialect-specific identifier quoting.
-func (m *Migrator) quotedTable() string {
-	return m.dialect.QuoteIdent(m.table)
+// validLedgerTable accepts only a simple SQL identifier. LedgerTable is
+// configuration, but validating it here keeps identifier interpolation safe
+// even when configuration is supplied by an untrusted deployment environment.
+func validLedgerTable(table string) bool {
+	if table == "" || (table[0] < 'A' || table[0] > 'Z') &&
+		(table[0] < 'a' || table[0] > 'z') && table[0] != '_' {
+		return false
+	}
+	for i := 1; i < len(table); i++ {
+		c := table[i]
+		if (c < 'A' || c > 'Z') && (c < 'a' || c > 'z') &&
+			(c < '0' || c > '9') && c != '_' {
+			return false
+		}
+	}
+	return true
+}
+
+// ledgerSQL substitutes the validated, dialect-quoted ledger identifier into
+// a query template. SQL parameters cannot represent identifiers, so this is
+// the one intentionally dynamic boundary; values remain ? parameters.
+func (m *Migrator) ledgerSQL(query string) string {
+	return strings.ReplaceAll(query, "__LEDGER_TABLE__", m.dialect.QuoteIdent(m.table)) // NOSONAR: table is validated by validLedgerTable.
 }
 
 // syncIDSequence resets the ledger's id sequence to MAX(id) on PostgreSQL.
@@ -280,14 +301,13 @@ func (m *Migrator) syncIDSequence(ctx context.Context) {
 	if m.dialect.Name() != "postgres" {
 		return
 	}
-	t := m.quotedTable()
-	_, err := m.db.ExecContext(ctx, `
+	_, err := m.db.ExecContext(ctx, m.ledgerSQL(`
 		SELECT setval(
 		    pg_get_serial_sequence($1, 'id'),
-		    GREATEST(COALESCE((SELECT MAX(id) FROM `+t+`), 0), 1),
-		    (SELECT COUNT(*) > 0 FROM `+t+`)
+		    GREATEST(COALESCE((SELECT MAX(id) FROM __LEDGER_TABLE__), 0), 1),
+		    (SELECT COUNT(*) > 0 FROM __LEDGER_TABLE__)
 		)
-		WHERE pg_get_serial_sequence($1, 'id') IS NOT NULL`, m.table)
+		WHERE pg_get_serial_sequence($1, 'id') IS NOT NULL`), m.table)
 	if err != nil {
 		m.logf("note: could not sync the %s id sequence: %v", m.table, err)
 	}
@@ -296,10 +316,10 @@ func (m *Migrator) syncIDSequence(ctx context.Context) {
 // appliedRows reads the successful ledger rows, keyed by version.
 func (m *Migrator) appliedRows(ctx context.Context) (map[string]Applied, error) {
 	rows, err := m.db.QueryContext(ctx,
-		`SELECT version, name, status, COALESCE(up_script,''), COALESCE(down_script,'')
-		   FROM `+m.quotedTable()+`
+		m.ledgerSQL(`SELECT version, name, status, COALESCE(up_script,''), COALESCE(down_script,'')
+		   FROM __LEDGER_TABLE__
 		  WHERE status = 'success'
-		  ORDER BY version`)
+		  ORDER BY version`))
 	if err != nil {
 		return nil, err
 	}
@@ -481,16 +501,14 @@ func (m *Migrator) applyInTx(ctx context.Context, f File) error {
 	}
 	// Clear any prior row for this version — a previous 'rollback' or
 	// 'failed' attempt — so the success row is the one a reader finds.
-	clear := rebind(m.dialect,
-		`DELETE FROM `+m.quotedTable()+` WHERE version = ?`)
+	clear := rebind(m.dialect, m.ledgerSQL(`DELETE FROM __LEDGER_TABLE__ WHERE version = ?`))
 	if _, err := tx.ExecContext(ctx, clear, f.Version); err != nil {
 		_ = tx.Rollback()
 		return fmt.Errorf("migrate: clearing the prior log for %s_%s: %w", f.Version, f.Name, err)
 	}
-	insert := rebind(m.dialect,
-		`INSERT INTO `+m.quotedTable()+
-			` (version, name, status, up_script, down_script, message, duration_ms)
-			  VALUES (?, ?, '`+StatusSuccess+`', ?, ?, 'Applied successfully', ?)`)
+	insert := rebind(m.dialect, m.ledgerSQL(`INSERT INTO __LEDGER_TABLE__
+			 (version, name, status, up_script, down_script, message, duration_ms)
+			  VALUES (?, ?, 'success', ?, ?, 'Applied successfully', ?)`))
 	if _, err := tx.ExecContext(ctx, insert,
 		f.Version, f.Name, f.Up, f.Down, time.Since(start).Milliseconds()); err != nil {
 		_ = tx.Rollback()
@@ -516,14 +534,12 @@ func (m *Migrator) applyWithoutTx(ctx context.Context, f File) error {
 	m.logf("applying %s_%s (no transactional DDL on %s; this cannot be rolled back)",
 		f.Version, f.Name, m.dialect.Name())
 
-	if _, err := m.exec(ctx,
-		`DELETE FROM `+m.quotedTable()+` WHERE version = ?`, f.Version); err != nil {
+	if _, err := m.exec(ctx, m.ledgerSQL(`DELETE FROM __LEDGER_TABLE__ WHERE version = ?`), f.Version); err != nil {
 		return fmt.Errorf("migrate: clearing the prior log for %s_%s: %w", f.Version, f.Name, err)
 	}
-	res, err := m.exec(ctx,
-		`INSERT INTO `+m.quotedTable()+
-			` (version, name, status, up_script, down_script)
-			  VALUES (?, ?, '`+StatusRunning+`', ?, ?)`,
+	res, err := m.exec(ctx, m.ledgerSQL(`INSERT INTO __LEDGER_TABLE__
+			 (version, name, status, up_script, down_script)
+			  VALUES (?, ?, 'running', ?, ?)`),
 		f.Version, f.Name, f.Up, f.Down)
 	if err != nil {
 		return fmt.Errorf("migrate: claiming %s_%s: %w", f.Version, f.Name, err)
@@ -531,20 +547,18 @@ func (m *Migrator) applyWithoutTx(ctx context.Context, f File) error {
 	id, _ := res.LastInsertId()
 
 	if _, err := m.db.ExecContext(ctx, f.Up); err != nil {
-		_, _ = m.exec(context.WithoutCancel(ctx),
-			`UPDATE `+m.quotedTable()+
-				` SET status = '`+StatusFailed+`', error = ?, message = ?, duration_ms = ?
-				  WHERE id = ?`,
+		_, _ = m.exec(context.WithoutCancel(ctx), m.ledgerSQL(`UPDATE __LEDGER_TABLE__
+				 SET status = 'failed', error = ?, message = ?, duration_ms = ?
+				  WHERE id = ?`),
 			err.Error(), "Failed; schema may be partly changed",
 			time.Since(start).Milliseconds(), id)
 		return fmt.Errorf("migrate: %s_%s failed and CANNOT be rolled back on %s — "+
 			"inspect the schema before retrying: %w", f.Version, f.Name, m.dialect.Name(), err)
 	}
 
-	if _, err := m.exec(ctx,
-		`UPDATE `+m.quotedTable()+
-			` SET status = '`+StatusSuccess+`', message = 'Applied successfully', duration_ms = ?
-			  WHERE id = ?`,
+	if _, err := m.exec(ctx, m.ledgerSQL(`UPDATE __LEDGER_TABLE__
+			 SET status = 'success', message = 'Applied successfully', duration_ms = ?
+			  WHERE id = ?`),
 		time.Since(start).Milliseconds(), id); err != nil {
 		return fmt.Errorf("migrate: %s_%s applied but could not be recorded — "+
 			"the ledger now understates the schema: %w", f.Version, f.Name, err)
@@ -559,10 +573,9 @@ func (m *Migrator) applyWithoutTx(ctx context.Context, f File) error {
 func (m *Migrator) recordFailure(ctx context.Context, f File, cause error, took time.Duration) {
 	rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 	defer cancel()
-	_, err := m.exec(rctx,
-		`INSERT INTO `+m.quotedTable()+
-			` (version, name, status, up_script, down_script, message, duration_ms, error)
-			  VALUES (?, ?, '`+StatusFailed+`', ?, ?, 'Rolled back', ?, ?)`,
+	_, err := m.exec(rctx, m.ledgerSQL(`INSERT INTO __LEDGER_TABLE__
+			 (version, name, status, up_script, down_script, message, duration_ms, error)
+			  VALUES (?, ?, 'failed', ?, ?, 'Rolled back', ?, ?)`),
 		f.Version, f.Name, f.Up, f.Down, took.Milliseconds(), cause.Error())
 	if err != nil {
 		m.logf("note: the failure of %s_%s could not be recorded: %v", f.Version, f.Name, err)
@@ -628,10 +641,9 @@ func (m *Migrator) Down(ctx context.Context, opt DownOptions) (int, error) {
 		// record of what this database once was; a rollback that erases them
 		// leaves a later investigation with nothing. The version counts as
 		// pending again, so the next run re-applies it.
-		if _, err := tx.ExecContext(ctx, rebind(m.dialect,
-			`UPDATE `+m.quotedTable()+
-				` SET status = '`+StatusRolledBack+`', message = 'Rolled back'
-				  WHERE version = ? AND status = '`+StatusSuccess+`'`), s.version); err != nil {
+		if _, err := tx.ExecContext(ctx, rebind(m.dialect, m.ledgerSQL(`UPDATE __LEDGER_TABLE__
+				 SET status = 'rollback', message = 'Rolled back'
+				  WHERE version = ? AND status = 'success'`)), s.version); err != nil {
 			_ = tx.Rollback()
 			return count, err
 		}
@@ -648,12 +660,11 @@ type step struct{ version, name, down string }
 
 // lastApplied reads the most recently applied migrations, newest first.
 func (m *Migrator) lastApplied(ctx context.Context, limit int) ([]step, error) {
-	rows, err := m.db.QueryContext(ctx, rebind(m.dialect,
-		`SELECT version, name, COALESCE(down_script,'')
-		   FROM `+m.quotedTable()+`
+	rows, err := m.db.QueryContext(ctx, rebind(m.dialect, m.ledgerSQL(`SELECT version, name, COALESCE(down_script,'')
+		   FROM __LEDGER_TABLE__
 		  WHERE status = 'success'
 		  ORDER BY version DESC
-		  LIMIT ?`), limit)
+		  LIMIT ?`)), limit)
 	if err != nil {
 		return nil, err
 	}

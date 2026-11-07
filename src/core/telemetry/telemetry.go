@@ -31,6 +31,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/IncepTools/go/src/web/response"
 )
 
 // InstrumentationName is the stable scope used by framework spans and meters.
@@ -294,18 +296,30 @@ func (t *Telemetry) Middleware() fiber.Handler {
 		c.SetContext(ctx)
 		err := c.Next()
 		elapsed := time.Since(start)
+		// Take the status from the error when there is one: the exception
+		// filter has not run yet, so the response still carries the default,
+		// and the span would claim a failed request returned 200.
 		status := c.Response().StatusCode()
+		if err != nil {
+			status = response.StatusForError(err)
+		}
 		route := c.Path()
 		if matched := c.Route(); matched != nil && matched.Path != "" {
 			route = matched.Path
 		}
 		span.SetName(c.Method() + " " + route)
 		span.SetAttributes(attribute.String("http.route", route), attribute.Int("http.response.status_code", status))
-		if err != nil || status >= http.StatusInternalServerError {
-			RecordError(span, err)
-			if err == nil {
-				span.SetStatus(codes.Error, fmt.Sprintf("HTTP %d", status))
-			}
+		// Record the detail of any failure, but set the span STATUS from the
+		// resolved HTTP status alone. OpenTelemetry reserves Error on a
+		// server span for 5xx, and tying it to `err != nil` instead would
+		// make the error rate depend on handler style: a 404 written with
+		// SendStatus would be healthy while the same 404 returned as a typed
+		// error would not.
+		if err != nil && !errors.Is(err, context.Canceled) {
+			span.RecordError(err)
+		}
+		if status >= http.StatusInternalServerError {
+			span.SetStatus(codes.Error, fmt.Sprintf("HTTP %d", status))
 		}
 		attrs := metric.WithAttributes(attribute.String("http.request.method", c.Method()), attribute.String("http.route", route), attribute.Int("http.response.status_code", status))
 		t.requests.Add(ctx, 1, attrs)

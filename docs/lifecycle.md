@@ -88,6 +88,22 @@ Do the same anywhere you write your own teardown.
 8. `Shutdown` hooks, reverse order, under the drain deadline.
 9. `Container.Close()` — closers in reverse construction order.
 
+## Reloading configuration
+
+Register reload callbacks on the application:
+
+```go
+app.OnReload(func(ctx context.Context) error {
+	return cfg.Load(ctx)
+})
+```
+
+A running server invokes the callback on `SIGHUP`. Reload callbacks run in
+registration order and all callbacks are attempted; an error is logged and
+the process continues with the last known-good configuration. Serverless
+runtimes do not have to emulate a signal: call `app.Reload(ctx)` from the
+platform's configuration or deployment lifecycle.
+
 ```go
 inceptools.Options{DrainTimeout: 25 * time.Second}
 ```

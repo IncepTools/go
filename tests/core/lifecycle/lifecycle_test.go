@@ -104,6 +104,26 @@ func TestObserveDetectsImplementedPhases(t *testing.T) {
 	}
 }
 
+func TestReloadRunsAllCallbacksAndJoinsFailures(t *testing.T) {
+	var ran []string
+	r := &lifecycle.Registry{}
+	r.AddReload("first", func(context.Context) error {
+		ran = append(ran, "first")
+		return errors.New("bad config")
+	})
+	r.AddReload("second", func(context.Context) error {
+		ran = append(ran, "second")
+		return nil
+	})
+
+	if err := r.Reload(context.Background()); err == nil {
+		t.Fatal("Reload returned nil for a failed callback")
+	}
+	if len(ran) != 2 || ran[0] != "first" || ran[1] != "second" {
+		t.Fatalf("reload order = %v", ran)
+	}
+}
+
 func TestShutdownGetsALiveContextAfterCancellation(t *testing.T) {
 	// The bug this guards: deriving the drain context from the cancelled one,
 	// so every shutdown hook sees a context that is already done and skips

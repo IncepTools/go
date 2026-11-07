@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
@@ -39,6 +40,13 @@ type Shutdowner interface {
 	OnShutdown(ctx context.Context) error
 }
 
+// Reloader refreshes runtime configuration after SIGHUP or an explicit
+// Application.Reload call. Reload failures are reported and the process keeps
+// serving with the last known-good configuration.
+type Reloader interface {
+	OnReload(ctx context.Context) error
+}
+
 // Hook is one named participant in the lifecycle. A hook need only implement
 // the phases it cares about.
 type Hook struct {
@@ -46,6 +54,7 @@ type Hook struct {
 	Init     func(ctx context.Context) error
 	Ready    func(ctx context.Context) error
 	Shutdown func(ctx context.Context) error
+	Reload   func(ctx context.Context) error
 }
 
 // Registry collects hooks and runs each phase in the right order.
@@ -82,10 +91,42 @@ func (r *Registry) Observe(name string, v any) {
 	if i, ok := v.(Shutdowner); ok {
 		h.Shutdown = i.OnShutdown
 	}
-	if h.Init == nil && h.Ready == nil && h.Shutdown == nil {
+	if i, ok := v.(Reloader); ok {
+		h.Reload = i.OnReload
+	}
+	if h.Init == nil && h.Ready == nil && h.Shutdown == nil && h.Reload == nil {
 		return
 	}
 	r.Add(h)
+}
+
+// AddReload registers a named reload callback without making it a lifecycle
+// participant. This is useful for configuration loaders that do not own a
+// resource to initialise or shut down.
+func (r *Registry) AddReload(name string, fn func(context.Context) error) {
+	if fn == nil {
+		return
+	}
+	r.Add(Hook{Name: name, Reload: fn})
+}
+
+// Reload runs all registered reload callbacks in registration order. A bad
+// callback does not prevent independent configuration sections from trying to
+// refresh; callers receive the joined errors and keep the old configuration.
+func (r *Registry) Reload(ctx context.Context) error {
+	r.mu.Lock()
+	hooks := append([]Hook(nil), r.hooks...)
+	r.mu.Unlock()
+	var errs []error
+	for _, h := range hooks {
+		if h.Reload == nil {
+			continue
+		}
+		if err := h.Reload(ctx); err != nil {
+			errs = append(errs, fmt.Errorf("lifecycle: %s failed to reload: %w", h.Name, err))
+		}
+	}
+	return errors.Join(errs...)
 }
 
 // Names lists registered hooks in order.
@@ -202,11 +243,54 @@ func Run(ctx context.Context, r *Registry, serve func() error, stop func(context
 	go func() { serveErr <- serve() }()
 
 	if err := r.Ready(ctx); err != nil {
-		return err
+		dctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), drain)
+		defer cancel()
+		var errs []error
+		errs = append(errs, err)
+		if stop != nil {
+			if stopErr := stop(dctx); stopErr != nil {
+				errs = append(errs, fmt.Errorf("lifecycle: stopping the listener: %w", stopErr))
+			}
+		}
+		errs = append(errs, r.Shutdown(dctx))
+		return errors.Join(errs...)
 	}
 
 	sigCtx, stopSignals := signal.NotifyContext(ctx, Signals...)
 	defer stopSignals()
+	reloadSignals := make(chan os.Signal, 1)
+	signal.Notify(reloadSignals, syscall.SIGHUP)
+	reloadDone := make(chan struct{})
+	reloadCtx, cancelReload := context.WithCancel(context.WithoutCancel(ctx))
+	var reloadWG sync.WaitGroup
+	reloadWG.Add(1)
+	defer func() {
+		cancelReload()
+		signal.Stop(reloadSignals)
+		close(reloadDone)
+		reloadWG.Wait()
+	}()
+	go func() {
+		defer reloadWG.Done()
+		for {
+			select {
+			case <-reloadSignals:
+				rctx, cancel := context.WithTimeout(reloadCtx, 10*time.Second)
+				if err := r.Reload(rctx); err != nil {
+					slog.Error("configuration reload failed", "error", err)
+				} else {
+					slog.Info("configuration reloaded")
+				}
+				cancel()
+			case <-sigCtx.Done():
+				return
+			case <-reloadCtx.Done():
+				return
+			case <-reloadDone:
+				return
+			}
+		}
+	}()
 
 	var runErr error
 	select {

@@ -1,0 +1,20 @@
+{
+  // This repository is a LIBRARY, not a service built with the framework,
+  // so the module-layout rules do not apply to it. The layering rules stay
+  // on: if somebody adds a service/ or controller/ directory under src/,
+  // they should still be checked.
+  "module": "github.com/IncepTools/go",
+
+  "layout": {
+    // All library code lives under src/, and every test under tests/,
+    // mirroring it. See CONTRIBUTING.md for why.
+    "apps": "src",
+    "tests": "mirror",
+    "tests_dir": "tests"
+  },
+
+  "rules": {
+    "app-has-no-root-file": "off",
+    "module-has-no-module-file": "off"
+  }
+}

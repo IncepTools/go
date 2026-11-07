@@ -59,9 +59,24 @@ brew install IncepTools/tap/icpt                      # macOS and Linux
 curl -fsSL https://raw.githubusercontent.com/IncepTools/go/main/install.sh | sh
 ```
 
-**The AI development skill**
+**AI agent setup**
 
-Install the framework skill into any project that uses inceptools:
+No vendor-specific setup is required when working in this repository. Codex,
+Cursor, Claude, Gemini/Antigravity-style agents, and other agents that support
+repository instructions discover the checked-in guidance automatically:
+
+- `AGENTS.md` — shared project rules for Codex and compatible agents
+- `CLAUDE.md` — Claude Code discovery bridge
+- `.cursor/rules/inceptools.mdc` — Cursor project rule
+- `GEMINI.md` — Gemini/Antigravity discovery bridge
+- `.github/copilot-instructions.md` — GitHub Copilot discovery bridge
+- `.agents/skills/inceptools/SKILL.md` — detailed canonical framework skill
+
+Grok and agents without a documented project-file convention should start with
+`AGENTS.md` and then load `.agents/skills/inceptools/SKILL.md` when the task
+needs framework-specific guidance.
+
+For another inceptools project, install the canonical skill once:
 
 ```bash
 mkdir -p .agents/skills/inceptools

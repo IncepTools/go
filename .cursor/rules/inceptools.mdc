@@ -1,0 +1,21 @@
+---
+description: inceptools framework architecture, CLI, testing, and safety rules
+alwaysApply: true
+---
+
+# inceptools project rule
+
+Read `AGENTS.md` and `.agents/skills/inceptools/SKILL.md` before implementing
+changes. They are the canonical instructions; this Cursor rule is only a
+discovery bridge.
+
+- Use `icpt init`, `icpt generate`, `icpt lint`, and `icpt doctor` rather than
+  inventing project structure.
+- Keep controller -> service -> repository -> database boundaries.
+- Put tests in the mirrored `tests/` tree; remember `examples/` is a separate
+  Go module.
+- Use parameterized SQL, validated identifiers, explicit guards, safe errors,
+  context cancellation, and idempotent background work.
+- Run focused tests, `go test ./...`, examples tests, and `git diff --check`.
+- Preserve unrelated changes and ask before destructive operations or pushing
+  releases/tags.

@@ -100,6 +100,7 @@ func TestDoSkipsWhenHeldElsewhere(t *testing.T) {
 func TestDoReleasesEvenWhenTheContextIsCancelled(t *testing.T) {
 	l := lock.NewMemory()
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	_, err := lock.Do(ctx, l, "job", time.Minute, func(context.Context) error {
 		cancel()

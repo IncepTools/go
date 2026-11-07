@@ -32,7 +32,6 @@ import (
 	"log"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -87,9 +86,20 @@ func run() error {
 	})
 
 	dsn := os.Getenv("BLOG_DATABASE_URL")
+	cleanupDB := func() {}
 	if dsn == "" {
-		dsn = filepath.Join(os.TempDir(), "inceptools-blog.db")
+		dbFile, err := os.CreateTemp("", "inceptools-blog-*.db")
+		if err != nil {
+			return err
+		}
+		dsn = dbFile.Name()
+		cleanupDB = func() { _ = os.Remove(dsn) }
+		if err := dbFile.Close(); err != nil {
+			cleanupDB()
+			return err
+		}
 	}
+	defer cleanupDB()
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		Logger: gormlogger.Default.LogMode(gormlogger.Warn),
 	})

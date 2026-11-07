@@ -9,6 +9,10 @@ layer, scheduling, caching, locks, idempotency, an outbox — and a CLI that
 scaffolds all of it, migrates your database, and then checks you kept to it.
 
 [![ci](https://github.com/IncepTools/go/actions/workflows/ci.yml/badge.svg)](https://github.com/IncepTools/go/actions/workflows/ci.yml)
+[![SonarCloud Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=IncepTools_go&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=IncepTools_go)
+[![SonarCloud Reliability](https://sonarcloud.io/api/project_badges/measure?project=IncepTools_go&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=IncepTools_go)
+[![SonarCloud Security](https://sonarcloud.io/api/project_badges/measure?project=IncepTools_go&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=IncepTools_go)
+[![SonarCloud Coverage](https://sonarcloud.io/api/project_badges/measure?project=IncepTools_go&metric=coverage)](https://sonarcloud.io/summary/new_code?id=IncepTools_go)
 [![Go Reference](https://pkg.go.dev/badge/github.com/IncepTools/go.svg)](https://pkg.go.dev/github.com/IncepTools/go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/IncepTools/go)](https://goreportcard.com/report/github.com/IncepTools/go)
 [![Go 1.26+](https://img.shields.io/badge/go-1.26%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)

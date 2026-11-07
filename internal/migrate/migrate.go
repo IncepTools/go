@@ -263,6 +263,13 @@ func (m *Migrator) ensureLedger(ctx context.Context) error {
 	return nil
 }
 
+// quotedTable is the only place where the configured ledger table enters SQL.
+// The value comes from trusted project configuration, not request input, and
+// QuoteIdent applies the dialect-specific identifier quoting.
+func (m *Migrator) quotedTable() string {
+	return m.dialect.QuoteIdent(m.table)
+}
+
 // syncIDSequence resets the ledger's id sequence to MAX(id) on PostgreSQL.
 //
 // A pg_dump custom-format restore copies the rows without advancing the
@@ -273,7 +280,7 @@ func (m *Migrator) syncIDSequence(ctx context.Context) {
 	if m.dialect.Name() != "postgres" {
 		return
 	}
-	t := m.dialect.QuoteIdent(m.table)
+	t := m.quotedTable()
 	_, err := m.db.ExecContext(ctx, `
 		SELECT setval(
 		    pg_get_serial_sequence($1, 'id'),
@@ -290,7 +297,7 @@ func (m *Migrator) syncIDSequence(ctx context.Context) {
 func (m *Migrator) appliedRows(ctx context.Context) (map[string]Applied, error) {
 	rows, err := m.db.QueryContext(ctx,
 		`SELECT version, name, status, COALESCE(up_script,''), COALESCE(down_script,'')
-		   FROM `+m.dialect.QuoteIdent(m.table)+`
+		   FROM `+m.quotedTable()+`
 		  WHERE status = 'success'
 		  ORDER BY version`)
 	if err != nil {
@@ -475,13 +482,13 @@ func (m *Migrator) applyInTx(ctx context.Context, f File) error {
 	// Clear any prior row for this version — a previous 'rollback' or
 	// 'failed' attempt — so the success row is the one a reader finds.
 	clear := rebind(m.dialect,
-		`DELETE FROM `+m.dialect.QuoteIdent(m.table)+` WHERE version = ?`)
+		`DELETE FROM `+m.quotedTable()+` WHERE version = ?`)
 	if _, err := tx.ExecContext(ctx, clear, f.Version); err != nil {
 		_ = tx.Rollback()
 		return fmt.Errorf("migrate: clearing the prior log for %s_%s: %w", f.Version, f.Name, err)
 	}
 	insert := rebind(m.dialect,
-		`INSERT INTO `+m.dialect.QuoteIdent(m.table)+
+		`INSERT INTO `+m.quotedTable()+
 			` (version, name, status, up_script, down_script, message, duration_ms)
 			  VALUES (?, ?, '`+StatusSuccess+`', ?, ?, 'Applied successfully', ?)`)
 	if _, err := tx.ExecContext(ctx, insert,
@@ -510,11 +517,11 @@ func (m *Migrator) applyWithoutTx(ctx context.Context, f File) error {
 		f.Version, f.Name, m.dialect.Name())
 
 	if _, err := m.exec(ctx,
-		`DELETE FROM `+m.dialect.QuoteIdent(m.table)+` WHERE version = ?`, f.Version); err != nil {
+		`DELETE FROM `+m.quotedTable()+` WHERE version = ?`, f.Version); err != nil {
 		return fmt.Errorf("migrate: clearing the prior log for %s_%s: %w", f.Version, f.Name, err)
 	}
 	res, err := m.exec(ctx,
-		`INSERT INTO `+m.dialect.QuoteIdent(m.table)+
+		`INSERT INTO `+m.quotedTable()+
 			` (version, name, status, up_script, down_script)
 			  VALUES (?, ?, '`+StatusRunning+`', ?, ?)`,
 		f.Version, f.Name, f.Up, f.Down)
@@ -525,7 +532,7 @@ func (m *Migrator) applyWithoutTx(ctx context.Context, f File) error {
 
 	if _, err := m.db.ExecContext(ctx, f.Up); err != nil {
 		_, _ = m.exec(context.WithoutCancel(ctx),
-			`UPDATE `+m.dialect.QuoteIdent(m.table)+
+			`UPDATE `+m.quotedTable()+
 				` SET status = '`+StatusFailed+`', error = ?, message = ?, duration_ms = ?
 				  WHERE id = ?`,
 			err.Error(), "Failed; schema may be partly changed",
@@ -535,7 +542,7 @@ func (m *Migrator) applyWithoutTx(ctx context.Context, f File) error {
 	}
 
 	if _, err := m.exec(ctx,
-		`UPDATE `+m.dialect.QuoteIdent(m.table)+
+		`UPDATE `+m.quotedTable()+
 			` SET status = '`+StatusSuccess+`', message = 'Applied successfully', duration_ms = ?
 			  WHERE id = ?`,
 		time.Since(start).Milliseconds(), id); err != nil {
@@ -553,7 +560,7 @@ func (m *Migrator) recordFailure(ctx context.Context, f File, cause error, took 
 	rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 	defer cancel()
 	_, err := m.exec(rctx,
-		`INSERT INTO `+m.dialect.QuoteIdent(m.table)+
+		`INSERT INTO `+m.quotedTable()+
 			` (version, name, status, up_script, down_script, message, duration_ms, error)
 			  VALUES (?, ?, '`+StatusFailed+`', ?, ?, 'Rolled back', ?, ?)`,
 		f.Version, f.Name, f.Up, f.Down, took.Milliseconds(), cause.Error())
@@ -622,7 +629,7 @@ func (m *Migrator) Down(ctx context.Context, opt DownOptions) (int, error) {
 		// leaves a later investigation with nothing. The version counts as
 		// pending again, so the next run re-applies it.
 		if _, err := tx.ExecContext(ctx, rebind(m.dialect,
-			`UPDATE `+m.dialect.QuoteIdent(m.table)+
+			`UPDATE `+m.quotedTable()+
 				` SET status = '`+StatusRolledBack+`', message = 'Rolled back'
 				  WHERE version = ? AND status = '`+StatusSuccess+`'`), s.version); err != nil {
 			_ = tx.Rollback()
@@ -643,7 +650,7 @@ type step struct{ version, name, down string }
 func (m *Migrator) lastApplied(ctx context.Context, limit int) ([]step, error) {
 	rows, err := m.db.QueryContext(ctx, rebind(m.dialect,
 		`SELECT version, name, COALESCE(down_script,'')
-		   FROM `+m.dialect.QuoteIdent(m.table)+`
+		   FROM `+m.quotedTable()+`
 		  WHERE status = 'success'
 		  ORDER BY version DESC
 		  LIMIT ?`), limit)

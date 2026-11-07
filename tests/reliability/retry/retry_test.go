@@ -78,6 +78,7 @@ func TestRetriesAConcurrentModificationConflictOnly(t *testing.T) {
 
 func TestStopsWhenTheContextIsCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	calls := 0
 	err := retry.Do(ctx, retry.Policy{MaxAttempts: 5, BaseDelay: 50 * time.Millisecond, NoJitter: true},
 		func(context.Context) error {

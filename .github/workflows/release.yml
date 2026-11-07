@@ -21,7 +21,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # goreleaser builds the changelog from history, so a shallow
           # clone would produce release notes covering one commit.
@@ -34,7 +34,7 @@ jobs:
         if: inputs.tag != ''
         run: git show origin/main:.goreleaser.yaml > .goreleaser.yaml
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: "1.26.10"
           cache: true
@@ -48,16 +48,16 @@ jobs:
         working-directory: examples
         run: go build ./... && go vet ./...
 
-      - uses: sigstore/cosign-installer@v3
-      - uses: anchore/sbom-action/download-syft@v0
+      - uses: sigstore/cosign-installer@f713795cb21599bc4e5c4b58cbad1da852d7eeb9 # v3
+      - uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0
 
-      - uses: goreleaser/goreleaser-action@v7
+      - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
         with:
           version: "~> v2"
           # The tap is optional. Without its token, publishing the GitHub
           # release must still succeed instead of failing after all artifacts
           # have already been uploaded.
-          args: release --clean ${{ secrets.HOMEBREW_TAP_TOKEN == '' && '--skip=brews' || '' }}
+          args: release --clean ${{ inputs.tag != '' && '--allow-dirty' || '' }} ${{ secrets.HOMEBREW_TAP_TOKEN == '' && '--skip=brews' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
@@ -69,7 +69,7 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: "1.26.10"
       - name: Warm the module proxy

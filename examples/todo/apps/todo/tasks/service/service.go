@@ -15,12 +15,12 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/IncepTools/go/core/ctxkit"
-	"github.com/IncepTools/go/core/errs"
-	"github.com/IncepTools/go/core/logx"
 	"github.com/IncepTools/go/examples/todo/apps/todo/tasks/dto"
-	"github.com/IncepTools/go/platform/events"
-	"github.com/IncepTools/go/web/pagination"
+	"github.com/IncepTools/go/src/core/ctxkit"
+	"github.com/IncepTools/go/src/core/errs"
+	"github.com/IncepTools/go/src/core/logx"
+	"github.com/IncepTools/go/src/platform/events"
+	"github.com/IncepTools/go/src/web/pagination"
 )
 
 // TaskCompleted is published when a task is marked done.

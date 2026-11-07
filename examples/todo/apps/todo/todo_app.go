@@ -4,9 +4,9 @@ package todo
 import (
 	"errors"
 
-	"github.com/IncepTools/go/core/di"
-	"github.com/IncepTools/go/core/module"
 	"github.com/IncepTools/go/examples/todo/apps/todo/tasks"
+	"github.com/IncepTools/go/src/core/di"
+	"github.com/IncepTools/go/src/core/module"
 )
 
 // App is the todo domain.

@@ -4,7 +4,7 @@ package dto
 import (
 	"time"
 
-	"github.com/IncepTools/go/core/errs"
+	"github.com/IncepTools/go/src/core/errs"
 )
 
 // CreateTask is the create request.

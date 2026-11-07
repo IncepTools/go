@@ -1,0 +1,13 @@
+{
+  "module": "github.com/IncepTools/go/examples",
+  "dialect": "sqlite",
+  "layout": {
+    "apps": "apps"
+  },
+  "databases": {
+    "default": {
+      "env_variable": "BLOG_DATABASE_URL",
+      "migration_path": "./migrations"
+    }
+  }
+}

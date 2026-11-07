@@ -11,12 +11,12 @@ import (
 	"github.com/IncepTools/go/examples/todo/apps/todo/tasks/constants"
 	"github.com/IncepTools/go/examples/todo/apps/todo/tasks/dto"
 	"github.com/IncepTools/go/examples/todo/apps/todo/tasks/service"
-	"github.com/IncepTools/go/web/binding"
-	"github.com/IncepTools/go/web/guard"
-	"github.com/IncepTools/go/web/pagination"
-	"github.com/IncepTools/go/web/pipe"
-	"github.com/IncepTools/go/web/response"
-	"github.com/IncepTools/go/web/router"
+	"github.com/IncepTools/go/src/web/binding"
+	"github.com/IncepTools/go/src/web/guard"
+	"github.com/IncepTools/go/src/web/pagination"
+	"github.com/IncepTools/go/src/web/pipe"
+	"github.com/IncepTools/go/src/web/response"
+	"github.com/IncepTools/go/src/web/router"
 )
 
 // TaskController serves the tasks resource.

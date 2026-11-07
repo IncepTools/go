@@ -5,16 +5,16 @@ import (
 	"context"
 	"time"
 
-	"github.com/IncepTools/go/core/di"
-	"github.com/IncepTools/go/core/logx"
-	"github.com/IncepTools/go/core/module"
 	"github.com/IncepTools/go/examples/todo/apps/todo/tasks/constants"
 	"github.com/IncepTools/go/examples/todo/apps/todo/tasks/controller"
 	"github.com/IncepTools/go/examples/todo/apps/todo/tasks/service"
-	"github.com/IncepTools/go/platform/events"
-	"github.com/IncepTools/go/platform/scheduler"
-	"github.com/IncepTools/go/web/guard"
-	"github.com/IncepTools/go/web/health"
+	"github.com/IncepTools/go/src/core/di"
+	"github.com/IncepTools/go/src/core/logx"
+	"github.com/IncepTools/go/src/core/module"
+	"github.com/IncepTools/go/src/platform/events"
+	"github.com/IncepTools/go/src/platform/scheduler"
+	"github.com/IncepTools/go/src/web/guard"
+	"github.com/IncepTools/go/src/web/health"
 )
 
 // Module is the tasks resource.

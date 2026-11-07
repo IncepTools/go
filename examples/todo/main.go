@@ -31,15 +31,15 @@ import (
 	"github.com/google/uuid"
 
 	inceptools "github.com/IncepTools/go"
-	"github.com/IncepTools/go/core/ctxkit"
-	"github.com/IncepTools/go/core/di"
-	"github.com/IncepTools/go/core/logx"
 	"github.com/IncepTools/go/examples/todo/apps/todo"
-	"github.com/IncepTools/go/platform/cache"
-	"github.com/IncepTools/go/platform/events"
-	"github.com/IncepTools/go/platform/lock"
-	"github.com/IncepTools/go/platform/scheduler"
-	"github.com/IncepTools/go/web/middleware"
+	"github.com/IncepTools/go/src/core/ctxkit"
+	"github.com/IncepTools/go/src/core/di"
+	"github.com/IncepTools/go/src/core/logx"
+	"github.com/IncepTools/go/src/platform/cache"
+	"github.com/IncepTools/go/src/platform/events"
+	"github.com/IncepTools/go/src/platform/lock"
+	"github.com/IncepTools/go/src/platform/scheduler"
+	"github.com/IncepTools/go/src/web/middleware"
 )
 
 func main() {

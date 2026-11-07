@@ -27,8 +27,11 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"go.opentelemetry.io/otel/attribute"
+
 	"github.com/IncepTools/go/src/core/ctxkit"
 	"github.com/IncepTools/go/src/core/logx"
+	"github.com/IncepTools/go/src/core/telemetry"
 )
 
 // Handler reacts to one event.
@@ -139,14 +142,29 @@ func Publish[T any](ctx context.Context, b *Bus, event T) error {
 }
 
 func (b *Bus) invoke(ctx context.Context, s subscription, event any) (err error) {
+	ctx, span := telemetry.Start(ctx, "event.handler",
+		attribute.String("event.type", reflect.TypeOf(event).String()),
+		attribute.String("event.handler", s.name),
+		attribute.String("event.mode", modeName(s.mode)),
+	)
+	defer span.End()
 	defer func() {
 		if r := recover(); r != nil {
 			logx.C(ctx).Error("event handler panicked",
 				"handler", s.name, "panic", fmt.Sprint(r), "stack", string(debug.Stack()))
 			err = fmt.Errorf("events: handler %s panicked", s.name)
 		}
+		telemetry.RecordError(span, err)
 	}()
-	return s.call(ctx, event)
+	err = s.call(ctx, event)
+	return err
+}
+
+func modeName(mode Mode) string {
+	if mode == Sync {
+		return "sync"
+	}
+	return "async"
 }
 
 // Wait blocks until every async handler started so far has finished.

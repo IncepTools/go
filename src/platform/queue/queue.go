@@ -13,6 +13,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/IncepTools/go/src/core/telemetry"
 )
 
 // Message is one queued payload. Attempts starts at one when a worker begins
@@ -169,7 +172,15 @@ func (q *Queue) worker(ctx context.Context) {
 func (q *Queue) process(ctx context.Context, msg Message) {
 	for msg.Attempts < q.opt.MaxAttempts {
 		msg.Attempts++
-		if err := q.h(ctx, msg); err == nil {
+		attemptCtx, span := telemetry.Start(ctx, "queue.process",
+			attribute.String("queue.name", q.name),
+			attribute.String("queue.message.id", msg.ID),
+			attribute.Int("queue.attempt", msg.Attempts),
+		)
+		err := q.h(attemptCtx, msg)
+		telemetry.RecordError(span, err)
+		span.End()
+		if err == nil {
 			return
 		} else if msg.Attempts == q.opt.MaxAttempts {
 			if q.opt.OnDeadLetter != nil {

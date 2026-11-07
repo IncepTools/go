@@ -21,9 +21,11 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/IncepTools/go/src/core/ctxkit"
 	"github.com/IncepTools/go/src/core/logx"
+	"github.com/IncepTools/go/src/core/telemetry"
 	"github.com/IncepTools/go/src/platform/lock"
 )
 
@@ -279,14 +281,21 @@ func (s *Scheduler) fire(ctx context.Context, j Job) {
 }
 
 func (s *Scheduler) safeRun(ctx context.Context, j Job) (err error) {
+	ctx, span := telemetry.Start(ctx, "scheduler.job",
+		attribute.String("job.name", j.Name),
+		attribute.Bool("job.singleton", j.Singleton),
+	)
+	defer span.End()
 	defer func() {
 		if r := recover(); r != nil {
 			logx.C(ctx).Error("scheduled job panicked",
 				"job", j.Name, "panic", fmt.Sprint(r), "stack", string(debug.Stack()))
 			err = fmt.Errorf("scheduler: job %s panicked", j.Name)
 		}
+		telemetry.RecordError(span, err)
 	}()
-	return j.Run(ctx)
+	err = j.Run(ctx)
+	return err
 }
 
 // OnShutdown implements lifecycle.Shutdowner: stop scheduling and wait for

@@ -24,6 +24,28 @@ type Mounted struct {
 	GuardNames []string
 }
 
+// RouteJSON is the data-only representation used by route dumps.
+type RouteJSON struct {
+	Method     string   `json:"method"`
+	Path       string   `json:"path"`
+	FullPath   string   `json:"full_path"`
+	Module     string   `json:"module"`
+	GuardNames []string `json:"guards"`
+	Public     bool     `json:"public"`
+}
+
+// JSONRoutes converts mounted routes into a serializable data-only view.
+func JSONRoutes(routes []Mounted) []RouteJSON {
+	serialized := make([]RouteJSON, 0, len(routes))
+	for _, route := range routes {
+		serialized = append(serialized, RouteJSON{
+			Method: route.Method, Path: route.Path, FullPath: route.FullPath,
+			Module: route.Module, GuardNames: route.GuardNames, Public: route.Public,
+		})
+	}
+	return serialized
+}
+
 // Registry records every mounted route.
 //
 // It is what makes the route table introspectable: `icpt routes` prints it,

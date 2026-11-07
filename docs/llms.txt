@@ -1,0 +1,21 @@
+# inceptools documentation map
+
+inceptools is an opinionated Go application framework and CLI for modular
+services. It provides explicit modules and dependency injection, route
+metadata, request validation, typed errors, scoped repositories, lifecycle
+management, scheduling, queues, events, webhooks, SSE, and reliability
+primitives.
+
+Use these documents as the canonical source for behavior:
+
+- Overview: introduction.md, first-steps.md, architecture.md
+- Application structure: modules.md, providers.md, controllers.md, lifecycle.md
+- HTTP: middleware.md, guards.md, interceptors.md, pipes.md, validation.md, exception-filters.md, health-checks.md
+- Data: database.md, pagination.md, migrations.md, caching.md
+- Background work: events.md, event-emitter.md, task-scheduling.md, queues.md, locks.md
+- Integrations: webhooks.md, sse.md, outbox.md
+- Reliability and security: resilience.md, idempotency.md, security.md, testing.md
+- Tooling: cli.md, project-config.md
+
+Runnable references live in ../examples/. Repository contribution and release
+contracts are documented in ../CONTRIBUTING.md and ../RELEASING.md.

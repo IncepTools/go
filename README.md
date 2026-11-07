@@ -430,6 +430,11 @@ examples sit beside their package while tests do not.
 
 ## Documentation
 
+The complete capability index is in [docs/README.md](docs/README.md). For
+documentation tooling and assistants, [docs/llms.txt](docs/llms.txt) is the
+compact canonical map. Repository maintenance rules live in
+[AGENTS.md](AGENTS.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
+
 **Overview** — [Introduction](docs/introduction.md) ·
 [First steps](docs/first-steps.md) ·
 [Modules](docs/modules.md) ·

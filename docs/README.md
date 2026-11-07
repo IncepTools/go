@@ -4,6 +4,17 @@ The [README](../README.md) is the tour. These go deeper, and each one explains
 the reasoning as much as the API — a convention whose reason nobody remembers
 is a convention that gets dropped the first time it is inconvenient.
 
+## Choose a path
+
+| You are… | Start here |
+|---|---|
+| Evaluating inceptools | [Introduction](introduction.md), then [First steps](first-steps.md) |
+| Building an HTTP service | [Modules](modules.md), [Controllers](controllers.md), [Middleware](middleware.md) |
+| Adding persistence | [Database](database.md), [Migrations](migrations.md), [Pagination](pagination.md) |
+| Operating background work | [Lifecycle](lifecycle.md), [Task scheduling](task-scheduling.md), [Queues](queues.md) |
+| Hardening production traffic | [Security](security.md), [Resilience](resilience.md), [Health checks](health-checks.md) |
+| Contributing to the framework | [Architecture](architecture.md), [Testing](testing.md), [CLI](cli.md) |
+
 ## Overview
 
 | | |

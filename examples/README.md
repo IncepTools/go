@@ -1,6 +1,6 @@
 # Examples
 
-Four services, each runnable with one command and nothing installed.
+Nine services, each runnable with one command and nothing installed.
 
 They are a **separate Go module** on purpose: they need dependencies the
 framework does not — a GORM dialector, a database driver — and anything in
@@ -9,18 +9,20 @@ imports this library.
 
 ```bash
 cd examples
-go run ./minimal    # :8080
-go run ./todo       # :8080
-go run ./blog       # :8081
-go run ./worker     # :8082
-go run ./webhooks     # :8084
-go run ./queues       # :8085
-go run ./scheduling   # :8086
-go run ./sse          # :8087
+go run ./minimal       # :8080
+go run ./todo          # :8080
+go run ./blog          # :8081
+go run ./worker        # :8082
+go run ./webhooks      # :8084
+go run ./queues        # :8085
+go run ./scheduling    # :8086
+go run ./sse           # :8087
 go run ./event-emitter # :8088
 ```
 
 Or from the repository root: `make examples` builds and vets all nine.
+Run one service at a time when examples share a port, or choose a different
+`Addr` in its `main.go`.
 
 | | Port | Shows |
 |---|---|---|
@@ -113,7 +115,7 @@ not failed, because a routine deploy should not page anybody.
 
 ## What they do not show
 
-**Real authentication.** All three HTTP examples read the account from a
+**Real authentication.** The HTTP examples read the account from a
 request header, and each says in a comment that a real service must never
 do that. Copy the *shape* — identity establishes who the caller is, a guard
 decides what they may do — not the mechanism.

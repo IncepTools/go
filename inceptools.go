@@ -31,8 +31,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -135,10 +138,12 @@ type Application struct {
 	// Log is the application logger.
 	Log *slog.Logger
 
-	opt    Options
-	api    fiber.Router
-	apps   []module.App
-	closed bool
+	opt            Options
+	api            fiber.Router
+	apps           []module.App
+	closed         bool
+	serverlessOnce sync.Once
+	serverlessErr  error
 }
 
 // New builds the application. It does not listen; call Run.
@@ -231,6 +236,67 @@ func New(opt Options) *Application {
 
 	di.MustSupply(app.Container, log)
 	return app
+}
+
+// OnReload registers a callback for SIGHUP reloads. It is also invoked by
+// Application.Reload, which is the equivalent entry point for serverless
+// runtimes that do not deliver process signals.
+func (a *Application) OnReload(fn func(context.Context) error) {
+	a.Lifecycle.AddReload("application.reload", fn)
+}
+
+// Reload refreshes runtime configuration without restarting the listener.
+// Server deployments normally call this from SIGHUP; Lambda and other
+// serverless adapters can call it from their control-plane lifecycle.
+func (a *Application) Reload(ctx context.Context) error {
+	return a.Lifecycle.Reload(ctx)
+}
+
+// Prepare performs the boot phases needed by a serverless adapter: eager
+// dependency construction, initialization, and ready hooks. It is safe to
+// call for every invocation; the work runs once per application cold start.
+// Long-lived servers must use Run, which owns the listener and signal loop.
+func (a *Application) Prepare(ctx context.Context) error {
+	a.serverlessOnce.Do(func() {
+		ctx = context.WithoutCancel(ctx)
+		if err := a.Container.Eager(); err != nil {
+			a.serverlessErr = fmt.Errorf("inceptools: wiring failed: %w", err)
+			return
+		}
+		if err := a.Lifecycle.Init(ctx); err != nil {
+			a.serverlessErr = errors.Join(err, a.Lifecycle.Shutdown(ctx), a.Container.Close(ctx))
+			return
+		}
+		if err := a.Lifecycle.Ready(ctx); err != nil {
+			a.serverlessErr = errors.Join(err, a.Lifecycle.Shutdown(ctx), a.Container.Close(ctx))
+		}
+	})
+	return a.serverlessErr
+}
+
+// ServeHTTP adapts the application to net/http-based serverless runtimes.
+// Fiber is fasthttp-native, so the adapter executes the same application
+// pipeline through Fiber's in-process test harness. Long-lived servers should
+// use Run; Lambda and similar runtimes can pass Application directly to their
+// HTTP adapter.
+func (a *Application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if err := a.Prepare(r.Context()); err != nil {
+		http.Error(w, "framework is not ready", http.StatusServiceUnavailable)
+		return
+	}
+	resp, err := a.Fiber.Test(r)
+	if err != nil {
+		http.Error(w, "framework request failed", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+	for key, values := range resp.Header {
+		for _, value := range values {
+			w.Header().Add(key, value)
+		}
+	}
+	w.WriteHeader(resp.StatusCode)
+	_, _ = io.Copy(w, resp.Body)
 }
 
 // API returns the router every app is mounted on — the version prefix group.

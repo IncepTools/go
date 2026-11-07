@@ -55,7 +55,7 @@ bench: ## Run the benchmarks
 examples: ## Build and vet the examples module
 	cd examples && go build ./... && go vet ./...
 
-.PHONY: run-todo run-blog run-worker run-minimal run-webhooks run-queues run-scheduling run-sse run-event-emitter
+.PHONY: run-todo run-blog run-worker run-minimal run-webhooks run-queues run-scheduling run-sse run-event-emitter run-serverless
 run-minimal: ## Run the minimal example on :8080
 	cd examples && go run ./minimal
 run-todo: ## Run the todo example on :8080
@@ -74,6 +74,8 @@ run-sse: ## Run the SSE example on :8087
 	cd examples && go run ./sse
 run-event-emitter: ## Run the event emitter example on :8088
 	cd examples && go run ./event-emitter
+run-serverless: ## Run the serverless example on :8089
+	cd examples && go run ./serverless
 
 # ----------------------------------------------------------------- checks
 

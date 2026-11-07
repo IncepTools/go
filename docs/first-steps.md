@@ -149,7 +149,7 @@ func run() error {
 			Timeout:  cfg.RequestTimeout,
 			Identity: resolveIdentity,
 			AccessLog: middleware.AccessLogOptions{
-				SkipPaths:     []string{"/healthz", "/readyz"},
+				SkipPaths:     []string{"/livez", "/healthz", "/readyz"},
 				SlowThreshold: time.Second,
 			},
 		},
@@ -216,6 +216,28 @@ name: the check alone is a race — two concurrent creates both see nothing and
 both insert. The check gives a good message, the index gives the guarantee.
 You need both.
 
+## Production telemetry and reloads
+
+Add one OpenTelemetry setup at the application boundary:
+
+```go
+tel, err := telemetry.New(telemetry.Config{
+	ServiceName: "shop",
+	SpanExporter: spanExporter,
+	MetricReader: metricReader,
+})
+if err != nil {
+	return err
+}
+
+app := inceptools.New(inceptools.Options{Service: "shop", Telemetry: tel})
+app.OnReload(func(ctx context.Context) error { return cfg.Load(ctx) })
+```
+
+The framework then instruments HTTP, scheduler, queue, event, and custom
+function executions and flushes providers during shutdown. A server receives
+reloads through SIGHUP; a serverless adapter calls `app.Reload(ctx)`.
+
 `module.WithEntities(&entity.Product{})` in the module file records that this
 module *owns* that table. It is metadata — it answers "who owns this?" and
 catches two modules claiming the same one — not a schema source.
@@ -227,7 +249,8 @@ go run .
 ```
 
 ```bash
-curl localhost:8080/healthz    # liveness: checks nothing, by design
+curl localhost:8080/livez     # liveness: checks nothing, by design
+curl localhost:8080/healthz   # compatibility alias
 curl localhost:8080/readyz     # readiness: 503 while a dependency is down
 curl localhost:8080/health     # the full report, for humans
 

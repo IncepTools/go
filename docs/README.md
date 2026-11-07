@@ -10,6 +10,7 @@ is a convention that gets dropped the first time it is inconvenient.
 |---|---|
 | Evaluating inceptools | [Introduction](introduction.md), then [First steps](first-steps.md) |
 | Building an HTTP service | [Modules](modules.md), [Controllers](controllers.md), [Middleware](middleware.md) |
+| Deploying server or serverless | [Lifecycle](lifecycle.md), [Health checks](health-checks.md), [Serverless](serverless.md) |
 | Adding persistence | [Database](database.md), [Migrations](migrations.md), [Pagination](pagination.md) |
 | Operating background work | [Lifecycle](lifecycle.md), [Task scheduling](task-scheduling.md), [Queues](queues.md) |
 | Hardening production traffic | [Security](security.md), [Resilience](resilience.md), [Health checks](health-checks.md) |
@@ -37,7 +38,8 @@ is a convention that gets dropped the first time it is inconvenient.
 | [Configuration](configuration.md) | Environment into a struct, validated at boot. |
 | [Validation](validation.md) | Binding, rules, normalisation, defaults, cross-field checks. |
 | [Logging](logging.md) | Structured logs with the request's identity attached. |
-| [Lifecycle](lifecycle.md) | Init, ready, shutdown — and draining properly. |
+| [OpenTelemetry](telemetry.md) | Traces and metrics for HTTP, jobs, queues, events, and functions. |
+| [Lifecycle](lifecycle.md) | Init, ready, reload, shutdown — and draining properly. |
 | [Testing](testing.md) | Module tests through the real pipeline, and structural tests. |
 | [Architecture](architecture.md) | The three levels, the layering rules, and the request pipeline. |
 
@@ -65,6 +67,7 @@ is a convention that gets dropped the first time it is inconvenient.
 | [Transactional outbox](outbox.md) | A side effect as durable as the write that caused it. |
 | [Resilience](resilience.md) | Retry with jitter, and a circuit breaker. |
 | [Health checks](health-checks.md) | Liveness and readiness as the different questions they are. |
+| [Serverless](serverless.md) | Reuse the application in Lambda and other `net/http` adapters. |
 | [Security](security.md) | Scoping, authorization, headers, CORS, rate limiting, leak prevention. |
 
 ## Tooling

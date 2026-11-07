@@ -9,7 +9,24 @@ change is listed under **Changed** with what to do about it.
 
 ## [Unreleased]
 
-No changes yet.
+### Added
+
+- `web/observability` provides an opt-in request metrics collector and
+  Prometheus-compatible handler. Route labels use the matched template, which
+  keeps high-cardinality path parameters out of the series.
+- `inceptools.Options.Metrics` wires the collector into the request pipeline
+  and exposes `/metrics` by default.
+- `web/middleware.RequestID` accepts valid W3C `traceparent` headers for
+  cross-service trace correlation while keeping request IDs separate.
+- `core/telemetry` adds provider-based OpenTelemetry tracing and metrics with
+  lifecycle shutdown, automatic HTTP instrumentation, and execution spans for
+  scheduler jobs, queue attempts, event handlers, and arbitrary functions.
+- `core/telemetry` can now configure standard OTLP/HTTP trace and metric
+  exporters from `OTEL_*` environment variables or `telemetry.OTLPConfig`,
+  keeping SigNoz, collectors, APMs, and custom providers vendor-neutral.
+- Applications now expose `/livez` plus the `/healthz` compatibility alias,
+  support `OnReload`/`Reload` for SIGHUP and serverless control planes, and
+  implement `net/http.Handler` for Lambda-style adapters.
 
 ## [1.0.0] — 2026-11-07
 

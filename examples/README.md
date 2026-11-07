@@ -1,6 +1,6 @@
 # Examples
 
-Nine services, each runnable with one command and nothing installed.
+Ten services, each runnable with one command and nothing installed.
 
 They are a **separate Go module** on purpose: they need dependencies the
 framework does not — a GORM dialector, a database driver — and anything in
@@ -18,11 +18,21 @@ go run ./queues        # :8085
 go run ./scheduling    # :8086
 go run ./sse           # :8087
 go run ./event-emitter # :8088
+go run ./serverless    # :8089
 ```
 
-Or from the repository root: `make examples` builds and vets all nine.
+Or from the repository root: `make examples` builds and vets all ten.
 Run one service at a time when examples share a port, or choose a different
 `Addr` in its `main.go`.
+
+HTTP examples expose `/livez` for liveness and `/readyz` for readiness;
+`/healthz` remains available as a compatibility alias. The worker example has
+the same probe surface even though it declares no business routes.
+
+For production observability, create one `core/telemetry.Telemetry` during
+startup and pass it as `inceptools.Options.Telemetry`. The same provider then
+traces HTTP requests, scheduled jobs, queues, events, and custom functions;
+see [`docs/telemetry.md`](../docs/telemetry.md).
 
 | | Port | Shows |
 |---|---|---|
@@ -35,6 +45,7 @@ Run one service at a time when examples share a port, or choose a different
 | [scheduling](scheduling) | 8086 | Singleton scheduled jobs and lifecycle draining. |
 | [sse](sse) | 8087 | Server-sent event streaming. |
 | [event-emitter](event-emitter) | 8088 | Typed asynchronous event subscribers. |
+| [serverless](serverless) | 8089 | The same application hosted as an `http.Handler`: `Prepare` instead of `Run`, `Reload` instead of `SIGHUP`. |
 
 ## Where to start
 
@@ -46,6 +57,9 @@ It is one file and it uses nothing optional.
 
 **Building a worker** — [`worker`](worker). A module does not have to serve
 routes to be a module.
+
+**Deploying to Lambda** — [`serverless`](serverless). The application is the
+same; only the host around it changes.
 
 ## What each one demonstrates
 

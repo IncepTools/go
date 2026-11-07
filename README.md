@@ -4,8 +4,8 @@
 
 **An opinionated application framework for Go services.**
 
-Modules, dependency injection, guards, interceptors, typed errors, a scoped data
-layer, scheduling, caching, locks, idempotency, an outbox — and a CLI that
+Modules, dependency injection, guards, interceptors, typed errors, structured
+observability, a scoped data layer, scheduling, caching, locks, idempotency, an outbox — and a CLI that
 scaffolds all of it, migrates your database, and then checks you kept to it.
 
 [![ci](https://github.com/IncepTools/go/actions/workflows/ci.yml/badge.svg)](https://github.com/IncepTools/go/actions/workflows/ci.yml)
@@ -14,9 +14,38 @@ scaffolds all of it, migrates your database, and then checks you kept to it.
 [![Go 1.26+](https://img.shields.io/badge/go-1.26%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-[Documentation](docs/) · [First steps](docs/first-steps.md) · [Examples](examples/) · [Roadmap](ROADMAP.md)
+[Documentation](docs/) · [First steps](docs/first-steps.md) · [Serverless](docs/serverless.md) · [Examples](examples/) · [Roadmap](ROADMAP.md)
 
 </div>
+
+## In one minute
+
+```go
+telemetry, err := telemetry.New(telemetry.Config{
+    ServiceName: "catalog",
+})
+if err != nil { log.Fatal(err) }
+
+app := inceptools.New(inceptools.Options{
+    Service: "catalog",
+    Prefix:  "/api/v1",
+    Telemetry: telemetry,
+    Middleware: middleware.ChainOptions{
+        AccessLog: middleware.AccessLogOptions{SlowThreshold: time.Second},
+    },
+})
+```
+
+Every request, scheduled job, queue attempt, and event handler receives an
+OpenTelemetry span. Metrics are emitted through the configured OTel meter
+provider, errors and panics are recorded, and providers flush during graceful
+shutdown. Use `telemetry.Run` or `telemetry.Start` for any other function.
+
+Set the standard `OTEL_EXPORTER_OTLP_ENDPOINT` and optional
+`OTEL_EXPORTER_OTLP_HEADERS` environment variables to send traces and metrics
+to SigNoz, an OpenTelemetry Collector, Elastic APM, Jaeger, Grafana, Honeycomb,
+or another OTLP backend. Custom SDK providers and exporters remain injectable.
+See [OpenTelemetry](docs/telemetry.md).
 
 ---
 
@@ -154,13 +183,19 @@ if err := app.Mount(catalog.Descriptor()); err != nil {
 return app.Run(context.Background())
 ```
 
-That gives you `/healthz`, `/readyz`, `/health`, a request id on every
-response, recovered panics, access logging, graceful shutdown, and
-`GET|POST|PATCH|DELETE /api/v1/catalog/products`.
+That gives you `/livez`, `/healthz` (compatibility alias), `/readyz`, and
+`/health`, a request id on every response, OpenTelemetry HTTP spans and
+metrics, recovered panics, access logging, graceful shutdown, SIGHUP config
+reloads, and `GET|POST|PATCH|DELETE /api/v1/catalog/products`.
+
+The same `Application` implements `net/http.Handler`, so a server runs it with
+`app.Run(ctx)` while Lambda or another serverless adapter can pass `app`
+directly to its HTTP bridge. Serverless runtimes can call `app.Reload(ctx)`
+because they do not have process signals.
 
 ## Examples
 
-Nine runnable services, each needing nothing installed:
+Ten runnable services, each needing nothing installed:
 
 ```bash
 cd examples
@@ -173,6 +208,7 @@ go run ./queues       # :8085  retrying workers
 go run ./scheduling   # :8086  singleton scheduled jobs
 go run ./sse          # :8087  server-sent events
 go run ./event-emitter # :8088 typed in-process events
+go run ./serverless    # :8089 the same app as an http.Handler
 ```
 
 [`examples/`](examples/) explains what each one demonstrates and what to try
@@ -181,7 +217,9 @@ data layer; [`worker`](examples/worker) shows that a module does not have to
 serve routes. The dedicated [`webhooks`](examples/webhooks),
 [`queues`](examples/queues), [`scheduling`](examples/scheduling), [`sse`](examples/sse)
 and [`event-emitter`](examples/event-emitter) examples each focus on one
-feature.
+feature. [`serverless`](examples/serverless) hosts the identical application
+through `http.Handler` — `Prepare` instead of `Run`, `Reload` instead of
+`SIGHUP` — which is the path a Lambda adapter takes.
 
 ## First-party capabilities
 
@@ -189,6 +227,8 @@ feature.
 |---|---|
 | Application architecture | `core/module`, `core/di`, `core/lifecycle` |
 | HTTP routes and policy | `web/router`, `web/guard`, `web/interceptor`, `web/middleware` |
+| Observability | `core/telemetry` — OpenTelemetry traces, metrics, propagation, and lifecycle flush |
+| Server and serverless | `Application.Run`, `Application.ServeHTTP`, `Application.Reload` |
 | Validation and response safety | `web/binding`, `web/pipe`, `web/response`, `web/filter` |
 | Database access | `data/repo`, `data/gormx`, migrations through `icpt` |
 | Recurring work and coordination | `platform/scheduler`, `platform/lock`, `platform/queue` |
@@ -526,7 +566,7 @@ nine runnable services, while package-level examples are rendered on
 | [`core/config`](src/core/config) | Environment into a struct, validated at boot, secrets masked in dumps. |
 | [`core/logx`](src/core/logx) | `log/slog` with the request's trace, account and actor attached. |
 | [`core/ctxkit`](src/core/ctxkit) | Request identity on a context, and `Detach` for background work. |
-| [`core/lifecycle`](src/core/lifecycle) | Init, ready, shutdown — reverse order, real drain deadline. |
+| [`core/lifecycle`](src/core/lifecycle) | Init, ready, reload, shutdown — reverse order, real drain deadline. |
 | [`web/router`](src/web/router) | Routes as data, plus the registry that makes them assertable. |
 | [`web/guard`](src/web/guard) | Authorization, per route, visible in the route table. |
 | [`web/interceptor`](src/web/interceptor) | Around-the-handler concerns: timing, headers, audit on success. |
@@ -537,6 +577,7 @@ nine runnable services, while package-level examples are rendered on
 | [`web/pagination`](src/web/pagination) | Bounded page requests with an allow-listed sort. |
 | [`web/middleware`](src/web/middleware) | Request id, recover, timeout, CORS, security headers, rate limit. |
 | [`web/health`](src/web/health) | Liveness and readiness as the different questions they are. |
+| [`core/telemetry`](src/core/telemetry) | Provider-based OpenTelemetry for HTTP, jobs, queues, events, and functions. |
 | [`data/repo`](src/data/repo) | The scoped generic repository, and transactions on a context. |
 | [`data/gormx`](src/data/gormx) | Driver errors into typed errors; composable query scopes. |
 | [`platform/cache`](src/platform/cache) | Memory or Redis; a cache failure is never a request failure. |
@@ -590,9 +631,11 @@ release workflow's own OIDC identity, and each ships an SBOM.
 
 **v1.0.0.** Built on Fiber v3 and GORM, both stable. The public API is now
 covered by the compatibility policy in [RELEASING.md](RELEASING.md).
-The next roadmap items are an OpenAPI generator from the route metadata
-already collected, and benchmarks with numbers in this file rather than
-claims.
+The next roadmap phase is contract-first: OpenAPI 3.1 generation and breaking
+change checks, a transport-neutral execution context, and a checked provider
+graph. Later phases add durable broker adapters, broader security policies,
+transport parity, generators, and optional platform integrations. See the
+[full roadmap](ROADMAP.md) for priorities and deliberate non-goals.
 
 ## Contributing
 

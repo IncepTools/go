@@ -36,7 +36,7 @@ see [`docs/telemetry.md`](../docs/telemetry.md).
 
 | | Port | Shows |
 |---|---|---|
-| [minimal](minimal) | 8080 | The floor: one domain, one module, one route, ~60 lines. |
+| [minimal](minimal) | 8080 | The floor: one domain, one module, one route — and every layer around them. |
 | [todo](todo) | 8080 | In-memory CRUD, events, a scheduled purge, the three DTO hooks. |
 | [blog](blog) | 8081 | A real database: migrations, a scoped repository, a transaction spanning a state change and an outbox message, and the relay that delivers it. |
 | [worker](worker) | 8082 | A service with **no API**: modules that declare schedules instead of routes, and a drain you can watch. |
@@ -47,10 +47,43 @@ see [`docs/telemetry.md`](../docs/telemetry.md).
 | [event-emitter](event-emitter) | 8088 | Typed asynchronous event subscribers. |
 | [serverless](serverless) | 8089 | The same application hosted as an `http.Handler`: `Prepare` instead of `Run`, `Reload` instead of `SIGHUP`. |
 
+## One layout, ten times
+
+Every example has the same shape, because it is the shape
+[`icpt generate`](../docs/cli.md) produces and the one worth copying:
+
+```
+main.go                         builds the application and mounts the domain
+icpt.json                        where the generator puts things
+apps/<domain>/
+  <domain>_app.go               Descriptor, Providers, NewApp
+  <module>/
+    <module>_module.go          Providers, New, and the module's lifecycle
+    constants/                  names and messages, spelled once
+    dto/                        request and response shapes
+    service/                    the business rules — imports nothing from web/
+    controller/                 the HTTP surface — holds no rules
+```
+
+**A module owns everything that is its own.** Its queue, its schedule, its
+subscriptions, its reloadable configuration, and its start and drain. A
+mounted module is a lifecycle participant, so implementing `OnReady`,
+`OnShutdown` or `OnReload` is the whole registration — there is no second step
+in `main` to forget.
+
+**A domain owns what its modules share.** The event bus, the scheduler engine:
+one per domain, because two would mean a publisher and its subscriber never
+meeting, or two sets of singleton locks.
+
+**`main.go` owns the process.** The logger, the address, the middleware chain,
+the drain timeout — and then it mounts a domain. In most of these examples
+that is all it does.
+
 ## Where to start
 
-**New to the framework** — read [`minimal`](minimal/main.go) top to bottom.
-It is one file and it uses nothing optional.
+**New to the framework** — read [`minimal`](minimal) top to bottom. It is the
+whole layout with the least possible content in it, and it uses nothing
+optional.
 
 **Building a CRUD API** — [`todo`](todo) is the shape, and
 [`blog`](blog) is the same shape with a database behind it.
@@ -65,9 +98,10 @@ same; only the host around it changes.
 
 ### minimal
 
-The smallest useful service. A domain built inline, one public route, a
-typed error that picks its own status. Everything else in the framework is
-optional and none of it appears here.
+The smallest **complete** service — every layer above, with about 25 lines of
+behaviour inside it. One public route and a typed error that picks its own
+status. Smallest complete, not smallest possible: the layout is the part worth
+copying, and a one-file version teaches a shape nobody should grow.
 
 ### todo
 

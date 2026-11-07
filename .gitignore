@@ -25,3 +25,6 @@ coverage.*
 .vscode/
 *.swp
 .DS_Store
+
+# Runtime config written by the serverless example at examples/quotes.json.
+/examples/quotes.json

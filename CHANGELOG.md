@@ -27,12 +27,15 @@ change is listed under **Changed** with what to do about it.
 
 ### Added
 
-- Four runnable examples — `minimal`, `todo`, `blog` (SQLite, migrations, a
-  transaction spanning a state change and an outbox message) and `worker`
-  (no HTTP surface at all) — each with a README.
+- Nine runnable examples — `minimal`, `todo`, `blog`, `worker`, `webhooks`,
+  `queues`, `scheduling`, `sse` and `event-emitter` — each with a README.
 - Runnable documentation examples in nine packages, rendered on pkg.go.dev.
   They sit beside their package because that is the only place pkg.go.dev
   looks; behavioural tests stay in `tests/`.
+- `platform/queue` provides bounded in-process workers with retries, dead-letter
+  handling and lifecycle draining.
+- `web/webhook` provides raw-body HMAC-SHA256 signing and constant-time
+  verification; `web/sse` provides heartbeat-aware streaming transport.
 - `icpt.json` accepts comments and trailing commas. The documentation tells
   people to record why a rule is off in a comment next to it, and
   `encoding/json` made that a syntax error. `Config.HadComments` reports
@@ -46,8 +49,8 @@ change is listed under **Changed** with what to do about it.
   `MAINTAINERS.md`, `ROADMAP.md` and `CODEOWNERS`.
 - `icpt version` reports the build version, commit, date and Go toolchain,
   falling back to the module's own build info when ldflags were not set.
-- CI gained coverage reporting, an examples job that smoke-tests each
-  service, and a tidy check across both modules.
+- CI gained coverage reporting, an examples job that smoke-tests each service,
+  and a tidy check across both modules.
 
 ### Fixed
 
@@ -117,7 +120,9 @@ First release.
 **Platform and reliability**
 
 - `platform/cache` (memory and Redis), `platform/events`, `platform/lock`,
-  `platform/scheduler`.
+  `platform/scheduler`, and `platform/queue` with retries and dead letters.
+- `web/webhook` for raw-body HMAC-SHA256 verification and `web/sse` for
+  heartbeat-aware streaming responses.
 - `reliability/retry`, `reliability/breaker`, `reliability/idempotency`
   (with GORM and in-memory stores), `reliability/outbox`.
 
@@ -135,8 +140,8 @@ First release.
   versions refused, one transaction per migration where the engine allows it,
   an advisory lock around the run, drift detection, and rollback from the
   stored script rather than the file.
-- Documentation under `docs/`, one page per capability, and a runnable
-  example service under `examples/todo`.
+- Documentation under `docs/`, one page per capability, and nine runnable
+  example services under `examples/`.
 
 [Unreleased]: https://github.com/IncepTools/go/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/IncepTools/go/releases/tag/v0.1.0

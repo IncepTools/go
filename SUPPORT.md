@@ -18,7 +18,7 @@ Most questions are answered faster by one of these:
 - `go doc github.com/IncepTools/go/src/data/repo` — every package's doc comment
   says what it is for and which failure it prevents. Often faster than the
   docs directory.
-- [`examples/`](examples/) — four runnable services. If you are wondering
+- [`examples/`](examples/) — nine runnable services. If you are wondering
   how two pieces fit together, one of them probably does it.
 - `icpt doctor` — checks whether the project is set up the way the tooling
   expects.

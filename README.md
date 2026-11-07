@@ -145,6 +145,20 @@ serve routes. The dedicated [`webhooks`](examples/webhooks),
 and [`event-emitter`](examples/event-emitter) examples each focus on one
 feature.
 
+## First-party capabilities
+
+| What you need | Inceptools |
+|---|---|
+| Application architecture | `core/module`, `core/di`, `core/lifecycle` |
+| HTTP routes and policy | `web/router`, `web/guard`, `web/interceptor`, `web/middleware` |
+| Validation and response safety | `web/binding`, `web/pipe`, `web/response`, `web/filter` |
+| Database access | `data/repo`, `data/gormx`, migrations through `icpt` |
+| Recurring work and coordination | `platform/scheduler`, `platform/lock`, `platform/queue` |
+| Events and streaming | `platform/events`, `web/sse` |
+| External delivery | `web/webhook`, `reliability/outbox` |
+| Failure handling | `reliability/retry`, `reliability/breaker`, `reliability/idempotency` |
+| Project tooling | `icpt init`, `generate`, `lint`, `routes`, `doctor`, `migrate` |
+
 ## The shape
 
 Three levels, and no more:
@@ -441,6 +455,9 @@ examples sit beside their package while tests do not.
 **Techniques** — [Caching](docs/caching.md) ·
 [Events](docs/events.md) ·
 [Task scheduling](docs/task-scheduling.md) ·
+[Queues](docs/queues.md) ·
+[Webhooks](docs/webhooks.md) ·
+[SSE](docs/sse.md) ·
 [Distributed locks](docs/locks.md) ·
 [Idempotency](docs/idempotency.md) ·
 [Transactional outbox](docs/outbox.md) ·
@@ -451,7 +468,8 @@ examples sit beside their package while tests do not.
 **Tooling** — [CLI](docs/cli.md) · [`icpt.json`](docs/project-config.md)
 
 Every package also carries a doc comment explaining what it is for and which
-failure it prevents, and nine of them ship runnable examples on
+failure it prevents. The separate [`examples/`](examples/) module contains
+nine runnable services, while package-level examples are rendered on
 [pkg.go.dev](https://pkg.go.dev/github.com/IncepTools/go).
 
 ## Packages
@@ -482,6 +500,9 @@ failure it prevents, and nine of them ship runnable examples on
 | [`platform/events`](src/platform/events) | Typed in-process events; panics contained, contexts detached. |
 | [`platform/lock`](src/platform/lock) | Distributed locks that only release their own. |
 | [`platform/scheduler`](src/platform/scheduler) | Cron and intervals, singleton and overlap-safe. |
+| [`platform/queue`](src/platform/queue) | Bounded in-process workers with retries and dead letters. |
+| [`web/webhook`](src/web/webhook) | Constant-time HMAC webhook signing and verification. |
+| [`web/sse`](src/web/sse) | Heartbeats, flushing and disconnect-aware SSE transport. |
 | [`reliability/retry`](src/reliability/retry) | Backoff with jitter, retrying only what is safe to repeat. |
 | [`reliability/breaker`](src/reliability/breaker) | Fail fast on a dependency that is down. |
 | [`reliability/idempotency`](src/reliability/idempotency) | `Idempotency-Key`, so a retried POST does not charge twice. |

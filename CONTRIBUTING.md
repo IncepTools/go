@@ -32,7 +32,7 @@ src/            all library code
 tests/          every test, mirroring src/ and internal/
 internal/       the CLI's own packages — unreachable from outside
 cmd/icpt/       the CLI
-examples/       four runnable services — a SEPARATE Go module
+examples/       nine runnable services — a SEPARATE Go module
 docs/           one page per capability
 inceptools.go   the application factory, at the module root
 ```

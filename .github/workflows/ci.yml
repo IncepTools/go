@@ -108,6 +108,11 @@ jobs:
           check minimal 8080
           check blog 8081
           check worker 8082
+          check webhooks 8084
+          check queues 8085
+          check scheduling 8086
+          check sse 8087
+          check event-emitter 8088
 
   tidy:
     name: modules are tidy

@@ -41,7 +41,10 @@ jobs:
       - uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"
-          args: release --clean
+          # The tap is optional. Without its token, publishing the GitHub
+          # release must still succeed instead of failing after all artifacts
+          # have already been uploaded.
+          args: release --clean ${{ secrets.HOMEBREW_TAP_TOKEN == '' && '--skip=brews' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}

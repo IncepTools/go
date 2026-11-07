@@ -1,0 +1,6 @@
+{
+  "module": "github.com/IncepTools/go/examples",
+  "layout": {
+    "apps": "apps"
+  }
+}

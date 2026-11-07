@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/IncepTools/go/examples/worker/apps/jobs/reports/constants"
 	"github.com/IncepTools/go/examples/worker/apps/jobs/reports/service"
 	"github.com/IncepTools/go/src/core/di"
 	"github.com/IncepTools/go/src/core/errs"
@@ -40,7 +41,7 @@ func New(s *di.Scope) *Module {
 	// duplicate name or a Singleton job with no locker fails the deploy
 	// rather than the night it was meant to run.
 	sched.MustAdd(scheduler.Job{
-		Name:       "reports.daily",
+		Name:       constants.JobDaily,
 		Every:      5 * time.Second, // a real one would be "0 2 * * *"
 		RunOnStart: true,
 		Singleton:  true,
@@ -50,7 +51,7 @@ func New(s *di.Scope) *Module {
 	})
 
 	sched.MustAdd(scheduler.Job{
-		Name:      "reports.sweep",
+		Name:      constants.JobSweep,
 		Cron:      "@every 20s",
 		Singleton: true,
 		Timeout:   time.Minute,
@@ -59,11 +60,11 @@ func New(s *di.Scope) *Module {
 
 	return &Module{
 		svc: svc,
-		Base: module.NewBase("reports",
+		Base: module.NewBase(constants.ModuleName,
 			// No controllers. The module's whole surface is its schedule.
-			module.WithHealthChecks(health.Of("reports", health.Optional,
+			module.WithHealthChecks(health.Of(constants.HealthCheck, health.Optional,
 				func(context.Context) error {
-					if _, failed := svc.Stats(); failed > 10 {
+					if _, failed := svc.Stats(); failed > constants.MaxFailedRuns {
 						return errs.Unavailable("too many failed report runs")
 					}
 					return nil

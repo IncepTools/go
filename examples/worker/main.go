@@ -23,10 +23,7 @@ import (
 
 	inceptools "github.com/IncepTools/go"
 	"github.com/IncepTools/go/examples/worker/apps/jobs"
-	"github.com/IncepTools/go/src/core/di"
 	"github.com/IncepTools/go/src/core/logx"
-	"github.com/IncepTools/go/src/platform/lock"
-	"github.com/IncepTools/go/src/platform/scheduler"
 	"github.com/IncepTools/go/src/web/middleware"
 )
 
@@ -58,20 +55,10 @@ func run() error {
 		},
 	})
 
-	// An in-memory locker, because this example is one process. Swap in
-	// lock.NewRedis for several replicas and the Singleton jobs then run on
-	// exactly one of them — nothing else changes.
-	sched := scheduler.New(lock.NewMemory())
-	di.MustSupply(app.Container, sched)
-
-	// Registering the scheduler with the lifecycle is what starts it in
-	// OnReady and drains it on the way down.
-	app.Lifecycle.Observe("scheduler", sched)
-
+	// The jobs domain owns its scheduler and the reports module declares its
+	// own jobs, so mounting the domain is the whole wiring.
 	if err := app.Mount(jobs.Descriptor()); err != nil {
 		return err
 	}
-
-	logger.Info("scheduled jobs", "names", sched.Jobs())
 	return app.Run(context.Background())
 }

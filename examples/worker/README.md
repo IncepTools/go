@@ -67,4 +67,6 @@ timeout and then abandons it mid-write.
 |---|---|
 | [`reports_module.go`](apps/jobs/reports/reports_module.go) | A module with no routes, and its schedules |
 | [`service/report_service.go`](apps/jobs/reports/service/report_service.go) | Ordinary methods taking a context — testable without a scheduler |
-| [`main.go`](main.go) | The locker, the lifecycle registration, the drain timeout |
+| [`jobs_app.go`](apps/jobs/jobs_app.go) | The domain: the scheduler engine, the locker, and its start/drain |
+| [`constants/`](apps/jobs/reports/constants/constants.go) | Job names — the scheduler's keys and the singleton lock's keys |
+| [`main.go`](main.go) | The application and the drain timeout, and nothing else |

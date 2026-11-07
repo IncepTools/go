@@ -289,7 +289,7 @@ func (a *Application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "framework request failed", http.StatusBadGateway)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	for key, values := range resp.Header {
 		for _, value := range values {
 			w.Header().Add(key, value)

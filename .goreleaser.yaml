@@ -98,6 +98,9 @@ changelog:
 release:
   draft: false
   prerelease: auto
+  # A rerun after a partial publish must replace existing assets instead of
+  # failing with GitHub's 422 already_exists response.
+  replace_existing_artifacts: true
   footer: |
     ## Install
 

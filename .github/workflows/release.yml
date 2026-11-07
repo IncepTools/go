@@ -3,6 +3,12 @@ name: release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to republish after a partial release"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -20,6 +26,13 @@ jobs:
           # goreleaser builds the changelog from history, so a shallow
           # clone would produce release notes covering one commit.
           fetch-depth: 0
+          ref: ${{ inputs.tag || github.ref }}
+
+      # Manual reruns use the current release workflow and configuration while
+      # checking out the immutable tag's source and version.
+      - name: Use current release configuration
+        if: inputs.tag != ''
+        run: git show origin/main:.goreleaser.yaml > .goreleaser.yaml
 
       - uses: actions/setup-go@v5
         with:

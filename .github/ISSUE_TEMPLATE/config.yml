@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question
+    url: https://github.com/IncepTools/go/discussions/categories/q-a
+    about: How do I…? Ask here — it is usually answered faster than an issue.
+  - name: Idea
+    url: https://github.com/IncepTools/go/discussions/categories/ideas
+    about: Something the framework should do. Discuss it before opening an issue.
+  - name: Security vulnerability
+    url: https://github.com/IncepTools/go/security/advisories/new
+    about: Report privately. Please do not open a public issue.

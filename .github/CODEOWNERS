@@ -1,0 +1,18 @@
+# Review assignment. The last matching pattern wins.
+
+*                       @ishansingla
+
+# The parts where a mistake is expensive and quiet.
+/core/di/               @ishansingla
+/data/repo/             @ishansingla
+/web/guard/             @ishansingla
+/web/response/          @ishansingla
+/internal/migrate/      @ishansingla
+/reliability/           @ishansingla
+
+# Anything that changes what ships, or what a consumer depends on.
+/go.mod                 @ishansingla
+/go.sum                 @ishansingla
+/.goreleaser.yaml       @ishansingla
+/.github/workflows/     @ishansingla
+/SECURITY.md            @ishansingla

@@ -14,47 +14,103 @@ concurrency:
 
 jobs:
   test:
-    name: test (go ${{ matrix.go }}, ${{ matrix.os }})
+    name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # Go 1.26 is the floor: Fiber v3 requires it, so this module does
-        # too. Three operating systems, because the CLI writes files and
-        # reads paths.
-        go: ["1.26"]
+        # Three operating systems, because the CLI writes files and reads
+        # paths. Go 1.26 is the floor — Fiber v3 requires it.
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go }}
+          go-version: "1.26"
           cache: true
 
       - name: Verify formatting
         if: runner.os == 'Linux'
         run: |
-          out=$(gofmt -l .)
+          out=$(gofmt -l . ; cd examples && gofmt -l .)
           if [ -n "$out" ]; then
             echo "These files are not gofmt'd:"; echo "$out"; exit 1
           fi
 
-      - name: go vet
-        run: go vet ./...
+      - run: go vet ./...
+      - run: go build ./...
 
-      - name: Build
-        run: go build ./...
-
-      # The race detector is where the DI container, the event bus, the
+      # The race detector is where the container, the event bus, the
       # scheduler and the breaker are actually checked: every one of them is
       # concurrent, and a data race in any of them is a production defect
       # that no single-threaded test would ever show.
       - name: Test
         run: go test -race -count=1 ./...
 
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      # The tests live in tests/ and the code in src/, so -coverpkg is not
+      # optional here: without it every run reports zero.
+      - name: Test with coverage
+        run: |
+          go test -coverpkg=./src/...,./internal/...,. \
+                  -coverprofile=coverage.out -covermode=atomic ./...
+          go tool cover -func=coverage.out | tail -1
+      - uses: codecov/codecov-action@v4
+        continue-on-error: true
+        with:
+          files: coverage.out
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  examples:
+    name: examples module
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      # The examples are a separate module, so the root `go build ./...`
+      # does not cover them. Without this job they rot silently.
+      - name: Build and vet
+        working-directory: examples
+        run: go build ./... && go vet ./...
+
+      - name: Smoke-test each example
+        working-directory: examples
+        run: |
+          set -euo pipefail
+          check() {
+            name="$1"; port="$2"
+            go run "./$name" >"/tmp/$name.log" 2>&1 &
+            pid=$!
+            for _ in $(seq 1 30); do
+              if curl -fsS "localhost:$port/healthz" >/dev/null 2>&1; then
+                echo "$name: healthy"
+                kill "$pid"; wait "$pid" 2>/dev/null || true
+                return 0
+              fi
+              sleep 1
+            done
+            echo "$name did not become healthy:"; cat "/tmp/$name.log"
+            kill "$pid" 2>/dev/null || true
+            return 1
+          }
+          check minimal 8080
+          check blog 8081
+          check worker 8082
+
   tidy:
-    name: go.mod is tidy
+    name: modules are tidy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -63,8 +119,9 @@ jobs:
           go-version: "1.26"
           cache: true
       - run: go mod tidy
+      - run: cd examples && go mod tidy
       - name: Fail when tidy changed something
-        run: git diff --exit-code -- go.mod go.sum
+        run: git diff --exit-code -- '**/go.mod' '**/go.sum' go.mod go.sum
 
   lint:
     name: golangci-lint
@@ -99,7 +156,7 @@ jobs:
           cd "$work"
           printf 'module example.com/generated\n\ngo 1.26\n' > go.mod
           /tmp/icpt init
-          /tmp/icpt generate module vpc/subnets
+          /tmp/icpt generate module catalog/products
           go mod edit -replace github.com/IncepTools/go="$GITHUB_WORKSPACE"
           go mod tidy
           go build ./...

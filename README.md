@@ -11,9 +11,10 @@ scaffolds all of it, migrates your database, and then checks you kept to it.
 [![ci](https://github.com/IncepTools/go/actions/workflows/ci.yml/badge.svg)](https://github.com/IncepTools/go/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/IncepTools/go.svg)](https://pkg.go.dev/github.com/IncepTools/go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/IncepTools/go)](https://goreportcard.com/report/github.com/IncepTools/go)
+[![Go 1.26+](https://img.shields.io/badge/go-1.26%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-[Documentation](docs/) · [Getting started](docs/first-steps.md) · [Example](examples/todo)
+[Documentation](docs/) · [First steps](docs/first-steps.md) · [Examples](examples/) · [Roadmap](ROADMAP.md)
 
 </div>
 
@@ -44,19 +45,28 @@ that could have failed at boot.
 
 ## Install
 
+**The library**
+
 ```bash
 go get github.com/IncepTools/go
-go install github.com/IncepTools/go/cmd/icpt@latest
+```
+
+**The CLI**
+
+```bash
+go install github.com/IncepTools/go/cmd/icpt@latest   # with a Go toolchain
+brew install IncepTools/tap/icpt                      # macOS and Linux
+curl -fsSL https://raw.githubusercontent.com/IncepTools/go/main/install.sh | sh
 ```
 
 Go 1.26+ (the floor Fiber v3 sets). HTTP is [Fiber v3](https://gofiber.io);
-persistence is [GORM](https://gorm.io), used only by `data/` — the rest of the
-framework does not know your database exists.
+persistence is [GORM](https://gorm.io), used only by `src/data` — the rest of
+the framework does not know your database exists.
 
 The CLI links five SQL drivers, but they live under `internal/` where nothing
-outside this module can reach them. A service importing one package of the
-library compiles one package: `go list -deps` on a program that imports
-`core/errs` shows exactly that and nothing else.
+outside this module can reach them. A program importing one package of the
+library compiles one package: `go list -deps` on a binary that imports
+`src/core/errs` shows exactly that and nothing more.
 
 ## Sixty seconds
 
@@ -110,8 +120,22 @@ That gives you `/healthz`, `/readyz`, `/health`, a request id on every
 response, recovered panics, access logging, graceful shutdown, and
 `GET|POST|PATCH|DELETE /api/v1/catalog/products`.
 
-A runnable service needing no database is in [`examples/todo`](examples/todo):
-`make example`.
+## Examples
+
+Four runnable services, each needing nothing installed:
+
+```bash
+cd examples
+go run ./minimal    # :8080  the floor — one domain, one route, ~60 lines
+go run ./todo       # :8080  in-memory CRUD, events, a scheduled purge
+go run ./blog       # :8081  SQLite: migrations, transactions, an outbox
+go run ./worker     # :8082  no API at all — schedules and a drain
+```
+
+[`examples/`](examples/) explains what each one demonstrates and what to try
+against it. [`blog`](examples/blog) is the one to read if you want to see the
+data layer; [`worker`](examples/worker) shows that a module does not have to
+serve routes.
 
 ## The shape
 
@@ -293,7 +317,9 @@ queueing a slow job behind itself turns a slowdown into an unbounded backlog.
 ## The CLI
 
 `icpt` reads `icpt.json` from the repository root, so it fits your layout
-rather than the other way round.
+rather than the other way round. Comments and trailing commas are accepted,
+because a file you are told to record decisions in has to allow a comment
+next to the decision.
 
 ```bash
 icpt init                               # write icpt.json
@@ -362,6 +388,24 @@ What it insists on:
   been edited means the ledger no longer describes a database this checkout can
   rebuild.
 
+## Repository layout
+
+```
+src/            all library code
+tests/          every test, mirroring src/ and internal/
+internal/       the CLI's own packages — unreachable from outside
+cmd/icpt/       the CLI
+examples/       four runnable services — a separate Go module
+docs/           one page per capability
+inceptools.go   the application factory, at the module root
+```
+
+`src/` is unusual for Go. It is here because this framework's argument is that
+a predictable layout is worth more than the freedom to put things anywhere,
+and a repository that did not follow its own advice would be hard to take
+seriously. See [CONTRIBUTING.md](CONTRIBUTING.md) for the rest, including why
+examples sit beside their package while tests do not.
+
 ## Documentation
 
 **Overview** — [Introduction](docs/introduction.md) ·
@@ -398,39 +442,43 @@ What it insists on:
 
 **Tooling** — [CLI](docs/cli.md) · [`icpt.json`](docs/project-config.md)
 
+Every package also carries a doc comment explaining what it is for and which
+failure it prevents, and nine of them ship runnable examples on
+[pkg.go.dev](https://pkg.go.dev/github.com/IncepTools/go).
+
 ## Packages
 
 | Package | What it is for |
 |---|---|
 | [`inceptools`](.) | The application factory. Assembles, serves, drains. |
-| [`core/di`](core/di) | Lazy, typed providers with cycle detection and ordered teardown. |
-| [`core/module`](core/module) | Apps, modules, the two-phase descriptor. |
-| [`core/errs`](core/errs) | One error type: a transport-neutral kind, a safe message, an internal cause. |
-| [`core/config`](core/config) | Environment into a struct, validated at boot, secrets masked in dumps. |
-| [`core/logx`](core/logx) | `log/slog` with the request's trace, account and actor attached. |
-| [`core/ctxkit`](core/ctxkit) | Request identity on a context, and `Detach` for background work. |
-| [`core/lifecycle`](core/lifecycle) | Init, ready, shutdown — reverse order, real drain deadline. |
-| [`web/router`](web/router) | Routes as data, plus the registry that makes them assertable. |
-| [`web/guard`](web/guard) | Authorization, per route, visible in the route table. |
-| [`web/interceptor`](web/interceptor) | Around-the-handler concerns: timing, headers, audit on success. |
-| [`web/binding`](web/binding) | Generic bind-and-validate with field-scoped errors. |
-| [`web/pipe`](web/pipe) | Typed parameter extraction that cannot silently yield a zero value. |
-| [`web/response`](web/response) | The envelope, and the one place a message is scrubbed. |
-| [`web/filter`](web/filter) | Exception filters; nothing reaches a client unclassified. |
-| [`web/pagination`](web/pagination) | Bounded page requests with an allow-listed sort. |
-| [`web/middleware`](web/middleware) | Request id, recover, timeout, CORS, security headers, rate limit. |
-| [`web/health`](web/health) | Liveness and readiness as the different questions they are. |
-| [`data/repo`](data/repo) | The scoped generic repository, and transactions on a context. |
-| [`data/gormx`](data/gormx) | Driver errors into typed errors; composable query scopes. |
-| [`platform/cache`](platform/cache) | Memory or Redis; a cache failure is never a request failure. |
-| [`platform/events`](platform/events) | Typed in-process events; panics contained, contexts detached. |
-| [`platform/lock`](platform/lock) | Distributed locks that only release their own. |
-| [`platform/scheduler`](platform/scheduler) | Cron and intervals, singleton and overlap-safe. |
-| [`reliability/retry`](reliability/retry) | Backoff with jitter, retrying only what is safe to repeat. |
-| [`reliability/breaker`](reliability/breaker) | Fail fast on a dependency that is down. |
-| [`reliability/idempotency`](reliability/idempotency) | `Idempotency-Key`, so a retried POST does not charge twice. |
-| [`reliability/outbox`](reliability/outbox) | A side effect as durable as the write that caused it. |
-| [`testkit`](testkit) | The real pipeline, in memory, with the envelope decoded. |
+| [`core/di`](src/core/di) | Lazy, typed providers with cycle detection and ordered teardown. |
+| [`core/module`](src/core/module) | Apps, modules, the two-phase descriptor. |
+| [`core/errs`](src/core/errs) | One error type: a transport-neutral kind, a safe message, an internal cause. |
+| [`core/config`](src/core/config) | Environment into a struct, validated at boot, secrets masked in dumps. |
+| [`core/logx`](src/core/logx) | `log/slog` with the request's trace, account and actor attached. |
+| [`core/ctxkit`](src/core/ctxkit) | Request identity on a context, and `Detach` for background work. |
+| [`core/lifecycle`](src/core/lifecycle) | Init, ready, shutdown — reverse order, real drain deadline. |
+| [`web/router`](src/web/router) | Routes as data, plus the registry that makes them assertable. |
+| [`web/guard`](src/web/guard) | Authorization, per route, visible in the route table. |
+| [`web/interceptor`](src/web/interceptor) | Around-the-handler concerns: timing, headers, audit on success. |
+| [`web/binding`](src/web/binding) | Generic bind-and-validate with field-scoped errors. |
+| [`web/pipe`](src/web/pipe) | Typed parameter extraction that cannot silently yield a zero value. |
+| [`web/response`](src/web/response) | The envelope, and the one place a message is scrubbed. |
+| [`web/filter`](src/web/filter) | Exception filters; nothing reaches a client unclassified. |
+| [`web/pagination`](src/web/pagination) | Bounded page requests with an allow-listed sort. |
+| [`web/middleware`](src/web/middleware) | Request id, recover, timeout, CORS, security headers, rate limit. |
+| [`web/health`](src/web/health) | Liveness and readiness as the different questions they are. |
+| [`data/repo`](src/data/repo) | The scoped generic repository, and transactions on a context. |
+| [`data/gormx`](src/data/gormx) | Driver errors into typed errors; composable query scopes. |
+| [`platform/cache`](src/platform/cache) | Memory or Redis; a cache failure is never a request failure. |
+| [`platform/events`](src/platform/events) | Typed in-process events; panics contained, contexts detached. |
+| [`platform/lock`](src/platform/lock) | Distributed locks that only release their own. |
+| [`platform/scheduler`](src/platform/scheduler) | Cron and intervals, singleton and overlap-safe. |
+| [`reliability/retry`](src/reliability/retry) | Backoff with jitter, retrying only what is safe to repeat. |
+| [`reliability/breaker`](src/reliability/breaker) | Fail fast on a dependency that is down. |
+| [`reliability/idempotency`](src/reliability/idempotency) | `Idempotency-Key`, so a retried POST does not charge twice. |
+| [`reliability/outbox`](src/reliability/outbox) | A side effect as durable as the write that caused it. |
+| [`testkit`](src/testkit) | The real pipeline, in memory, with the envelope decoded. |
 
 ## Testing
 
@@ -448,20 +496,40 @@ These go through the real middleware, the real guards and the real exception
 filter — which is where most of this framework's behaviour lives, and where a
 mock would quietly diverge.
 
+## Versioning and support
+
+[Semantic Versioning](https://semver.org). Before 1.0 the exported API may
+change between minor versions, and every such change is listed in
+[CHANGELOG.md](CHANGELOG.md) under **Changed** with what to do about it. After
+1.0, no exported identifier changes incompatibly within a major version.
+
+Release archives are signed with [cosign](https://docs.sigstore.dev) using the
+release workflow's own OIDC identity, and each ships an SBOM.
+[RELEASING.md](RELEASING.md) has the process and the verification command.
+
+| | |
+|---|---|
+| Questions | [Discussions → Q&A](https://github.com/IncepTools/go/discussions/categories/q-a) |
+| Bugs | [Open an issue](https://github.com/IncepTools/go/issues/new?template=bug_report.yml) |
+| Security | **Not a public issue** — [SECURITY.md](SECURITY.md) |
+| Everything else | [SUPPORT.md](SUPPORT.md) |
+
 ## Status
 
-**v0.1.0.** The API may change between minor versions until 1.0; the changelog
-says how. Built on Fiber v3 and GORM, both stable.
-
-Tracked for later: GraphQL, WebSockets, message-broker transports,
-internationalisation, and an OpenAPI document generated from the route
-metadata — which is already collected, see `Application.RoutesJSON`.
+**v0.1.0.** Built on Fiber v3 and GORM, both stable. The API is close to
+settled; what stands between here and 1.0 is in [ROADMAP.md](ROADMAP.md) —
+mainly soak time, an OpenAPI generator from the route metadata already
+collected, and benchmarks with numbers in this file rather than claims.
 
 ## Contributing
 
 [CONTRIBUTING.md](CONTRIBUTING.md). The short version: explain the failure a
 line prevents, not the mechanism; `make ci` must pass; a fix comes with a test
 that fails without it.
+
+Governance is in [GOVERNANCE.md](GOVERNANCE.md), and the bar for a new
+dependency is deliberately high — a framework's dependencies become every
+importer's.
 
 ## License
 

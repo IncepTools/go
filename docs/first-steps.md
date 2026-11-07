@@ -99,10 +99,10 @@ import (
 	"gorm.io/gorm"
 
 	inceptools "github.com/IncepTools/go"
-	"github.com/IncepTools/go/core/config"
-	"github.com/IncepTools/go/core/di"
-	"github.com/IncepTools/go/core/logx"
-	"github.com/IncepTools/go/web/middleware"
+	"github.com/IncepTools/go/src/core/config"
+	"github.com/IncepTools/go/src/core/di"
+	"github.com/IncepTools/go/src/core/logx"
+	"github.com/IncepTools/go/src/web/middleware"
 
 	"github.com/acme/shop/apps/catalog"
 	appconfig "github.com/acme/shop/internal/appconfig"

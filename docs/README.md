@@ -62,5 +62,5 @@ is a convention that gets dropped the first time it is inconvenient.
 ---
 
 Every package also carries a doc comment explaining what it is for and which
-failure it exists to prevent. `go doc github.com/IncepTools/go/data/repo` is
+failure it exists to prevent. `go doc github.com/IncepTools/go/src/data/repo` is
 often faster than this directory.

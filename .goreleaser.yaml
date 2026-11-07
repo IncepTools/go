@@ -1,0 +1,142 @@
+# Release configuration for the icpt CLI.
+#
+# The LIBRARY is published by pushing a tag — Go modules have no registry to
+# upload to, and `go get github.com/IncepTools/go@v1.2.3` resolves straight
+# from this repository. Everything here is about the CLI, which people would
+# otherwise have to build themselves.
+#
+# Dry run before tagging:  make release-dry
+version: 2
+
+project_name: icpt
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+
+builds:
+  - id: icpt
+    main: ./cmd/icpt
+    binary: icpt
+    env:
+      # No cgo, so a binary built on the CI runner works on any machine with
+      # the same OS and architecture — including Alpine, whose musl libc is
+      # where dynamically linked Go binaries usually fail.
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      # Strips the build machine's paths out of the binary, so two builds of
+      # the same commit produce the same bytes.
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+      - -X main.commit={{ .FullCommit }}
+      - -X main.date={{ .CommitDate }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: icpt
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+# A software bill of materials per archive. Increasingly a procurement
+# requirement, and free to produce.
+sboms:
+  - artifacts: archive
+
+# Keyless signing through the CI runner's OIDC identity. There is no private
+# key to lose, and `cosign verify-blob` proves an artifact came from this
+# repository's release workflow rather than from somebody's laptop.
+signs:
+  - cmd: cosign
+    certificate: "${artifact}.pem"
+    args:
+      - sign-blob
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "${artifact}"
+      - --yes
+    artifacts: checksum
+    output: true
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Documentation
+      regexp: '^.*?docs(\(.+\))??!?:.+$'
+      order: 2
+    - title: Other
+      order: 99
+  filters:
+    exclude:
+      - "^test:"
+      - "^chore\\(deps\\):"
+      - "^Merge "
+
+release:
+  draft: false
+  prerelease: auto
+  footer: |
+    ## Install
+
+    **The library**
+
+    ```bash
+    go get github.com/IncepTools/go@{{ .Tag }}
+    ```
+
+    **The CLI**
+
+    ```bash
+    go install github.com/IncepTools/go/cmd/icpt@{{ .Tag }}
+    # or
+    brew install IncepTools/tap/icpt
+    # or
+    curl -fsSL https://raw.githubusercontent.com/IncepTools/go/main/install.sh | sh
+    ```
+
+    Every archive is signed and ships an SBOM. To verify:
+
+    ```bash
+    cosign verify-blob checksums.txt \
+      --certificate checksums.txt.pem \
+      --signature checksums.txt.sig \
+      --certificate-identity-regexp 'https://github.com/IncepTools/go/.*' \
+      --certificate-oidc-issuer https://token.actions.githubusercontent.com
+    ```
+
+brews:
+  - name: icpt
+    repository:
+      owner: IncepTools
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: https://github.com/IncepTools/go
+    description: Scaffolding, structure rules and SQL migrations for inceptools services
+    license: Apache-2.0
+    test: |
+      system "#{bin}/icpt", "version"
+    skip_upload: auto

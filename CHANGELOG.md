@@ -9,6 +9,60 @@ change is listed under **Changed** with what to do about it.
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking: all library code moved to `src/`.** Every import gains a
+  segment: `github.com/IncepTools/go/src/core/errs`. The application factory
+  stays at the module root, so the façade is still
+  `github.com/IncepTools/go`. See [CONTRIBUTING.md](CONTRIBUTING.md) for why.
+- **Every test moved to `tests/`**, mirroring the package path. They were
+  already external test packages, so nothing but import paths changed.
+  Coverage now needs `-coverpkg` — `make cover` passes it; a bare
+  `go test -cover` reports zero because the test packages contain no
+  statements of their own.
+- **The examples are a separate Go module.** They need a GORM dialector and
+  a database driver, and anything in the root `go.mod` becomes a line in the
+  `go.sum` of every importer. `make examples` builds them; the root
+  `go build ./...` does not.
+
+### Added
+
+- Four runnable examples — `minimal`, `todo`, `blog` (SQLite, migrations, a
+  transaction spanning a state change and an outbox message) and `worker`
+  (no HTTP surface at all) — each with a README.
+- Runnable documentation examples in nine packages, rendered on pkg.go.dev.
+  They sit beside their package because that is the only place pkg.go.dev
+  looks; behavioural tests stay in `tests/`.
+- `icpt.json` accepts comments and trailing commas. The documentation tells
+  people to record why a rule is off in a comment next to it, and
+  `encoding/json` made that a syntax error. `Config.HadComments` reports
+  that a file carries them, and `icpt init -force` refuses rather than
+  discarding them.
+- Release engineering: a goreleaser configuration producing signed,
+  SBOM-carrying archives for five platforms and a Homebrew formula;
+  `install.sh` with checksum verification; `make apidiff`, `make cover`,
+  `make bench`, `make release-dry` and `make release-check`.
+- Project documents: `RELEASING.md`, `SUPPORT.md`, `GOVERNANCE.md`,
+  `MAINTAINERS.md`, `ROADMAP.md` and `CODEOWNERS`.
+- `icpt version` reports the build version, commit, date and Go toolchain,
+  falling back to the module's own build info when ldflags were not set.
+- CI gained coverage reporting, an examples job that smoke-tests each
+  service, and a tidy check across both modules.
+
+### Fixed
+
+- **A scheduled job cancelled by shutdown is no longer logged as a failure.**
+  It was reported at error level with `kind=internal`, so a routine pod roll
+  paged somebody — which is how an alert stops being read. It is now an info
+  line, and a deadline exceeded is a warn naming the timeout.
+- **`icpt doctor` no longer demands a DSN for a database the project never
+  declared.** `Targets` always yields a synthetic `default` so that
+  `icpt migrate` works with no configuration; `Config.DeclaresDatabases`
+  now tells the two apart, so a library repository passes `doctor`.
+
+  *(Both of the above landed inside the `src/` restructure commit rather
+  than their own.)*
+
 ## [0.1.0] — 2026-11-07
 
 First release.

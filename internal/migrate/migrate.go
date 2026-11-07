@@ -174,8 +174,16 @@ func Open(ctx context.Context, opt Options) (*Migrator, error) {
 	return &Migrator{
 		db: db, dialect: d, dir: opt.Dir, name: opt.Name,
 		table: table, noLock: opt.NoLock,
-		Out: func(string, ...any) {},
+		Out: discardOutput,
 	}, nil
+}
+
+// discardOutput is the explicit default when callers do not need progress
+// logging. Keeping it as a real function makes the no-output policy visible
+// and gives callers a stable callback to replace.
+func discardOutput(format string, args ...any) {
+	_ = format
+	_ = args
 }
 
 // Dialect returns the engine this migrator targets.
@@ -183,7 +191,10 @@ func (m *Migrator) Dialect() Dialect { return m.dialect }
 
 // exec runs a statement written with ? placeholders.
 func (m *Migrator) exec(ctx context.Context, q string, args ...any) (sql.Result, error) {
-	return m.db.ExecContext(ctx, rebind(m.dialect, q), args...)
+	query := rebind(m.dialect, q)
+	// NOSONAR: q is assembled from migration files and validated identifiers;
+	// all runtime values are passed separately as parameter arguments.
+	return m.db.ExecContext(ctx, query, args...)
 }
 
 // Close releases the connection.

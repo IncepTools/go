@@ -39,3 +39,10 @@ run make lint, make vuln, and make release-dry.
 
 Read CONTRIBUTING.md for the complete architecture and review rules, and
 RELEASING.md before changing versions.
+
+## AI agents
+
+The framework-specific agent instructions are available at
+[`.agents/skills/inceptools/SKILL.md`](.agents/skills/inceptools/SKILL.md).
+Agents working on an inceptools project should load that skill before creating
+modules, changing framework features, or running release workflows.
